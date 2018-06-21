@@ -450,7 +450,8 @@ void FastText::predict(
 
 void FastText::getSentenceVector(
     std::istream& in,
-    fasttext::Vector& svec) {
+    fasttext::Vector& svec,
+    const bool& normalise) {
   svec.zero();
   if (args_->model == model_name::sup) {
     std::vector<int32_t> line, labels;
@@ -479,6 +480,13 @@ void FastText::getSentenceVector(
     }
     if (count > 0) {
       svec.mul(1.0 / count);
+    }
+  }
+
+  if(normalise) {
+    real norm = svec.norm();
+    if (norm > 0.0) {
+      svec.mul(1.0 / norm);
     }
   }
 }
