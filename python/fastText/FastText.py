@@ -51,7 +51,7 @@ class _FastText():
         self.f.getWordVector(b, word, normalise)
         return np.array(b)
 
-    def get_sentence_vector(self, text):
+    def get_sentence_vector(self, text, normalise = False):
         """
         Given a string, get a single vector represenation. This function
         assumes to be given a single line of text. We split words on
@@ -65,7 +65,7 @@ class _FastText():
         text += "\n"
         dim = self.get_dimension()
         b = fasttext.Vector(dim)
-        self.f.getSentenceVector(b, text)
+        self.f.getSentenceVector(b, text, normalise)
         return np.array(b)
 
     def get_word_id(self, word):
