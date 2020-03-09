@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-16.04
     steps:
       - uses: actions/checkout@v1
-      - uses: olegtarasov/get-tag@v1
+      - uses: olegtarasov/get-tag@v2
       - uses: olegtarasov/download-nuget@v1
       - name: Build
         run: |
@@ -23,7 +23,7 @@ jobs:
           APITOKEN: ${{ secrets.NugetToken }}
         run: |
           cd nuget
-          mono $NUGET_EXE pack FastText.Native.Linux.nuspec -Version $GITHUB_TAG_NAME
+          mono $NUGET_EXE pack FastText.Native.Linux.nuspec -Version $GIT_TAG_NAME
           mono $NUGET_EXE push FastText.Native.Linux*.nupkg  -Source https://api.nuget.org/v3/index.json -ApiKey $APITOKEN
 
   build_macos:
@@ -43,7 +43,7 @@ jobs:
           APITOKEN: ${{ secrets.NugetToken }}
         run: |
           cd nuget
-          mono $NUGET_EXE pack FastText.Native.MacOs.nuspec -Version $GITHUB_TAG_NAME
+          mono $NUGET_EXE pack FastText.Native.MacOs.nuspec -Version $GIT_TAG_NAME
           mono $NUGET_EXE push FastText.Native.MacOs*.nupkg  -Source https://api.nuget.org/v3/index.json -ApiKey $APITOKEN
 
   build_windows:
@@ -63,5 +63,5 @@ jobs:
           APITOKEN: ${{ secrets.NugetToken }}
         run: |
           cd nuget
-          nuget pack FastText.Native.Windows.nuspec -Version %GITHUB_TAG_NAME%
+          nuget pack FastText.Native.Windows.nuspec -Version %GIT_TAG_NAME%
           nuget push FastText.Native.Windows*.nupkg  -Source https://api.nuget.org/v3/index.json -ApiKey %APITOKEN% -NoSymbols
