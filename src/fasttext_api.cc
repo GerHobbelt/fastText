@@ -1,6 +1,7 @@
 #include <string>
 #include <cstring>
 #include <sstream>
+#include <strstream>
 #include "fasttext.h"
 #include "fasttext_api.h"
 
@@ -18,12 +19,31 @@ FT_API(void) LoadModel(void* hPtr, const char* path)
     fastText->loadModel(path);
 }
 
+FT_API(void) LoadModelData(void* hPtr, const char* data, const long length)
+{
+	const auto FASTTEXT_VERSION = 12; /* Version 1b */
+	const auto FASTTEXT_FILEFORMAT_MAGIC_INT32 = 793712314;
+	auto fastText = static_cast<FastText*>(hPtr);
+	std::istrstream stream(data, length);
+	int32_t magic;
+	int32_t version;
+	stream.read(reinterpret_cast<char*>(&magic), sizeof(int32_t));
+	if (magic != FASTTEXT_FILEFORMAT_MAGIC_INT32) {
+		throw std::invalid_argument("Data has wrong format!");
+	}
+	stream.read(reinterpret_cast<char*>(&version), sizeof(int32_t));
+	if (version > FASTTEXT_VERSION) {
+		throw std::invalid_argument("Data has wrong format!");
+	}
+	fastText->loadModel(stream);
+}
+
 FT_API(void) DestroyFastText(void* hPtr)
 {
     delete static_cast<FastText*>(hPtr);
 }
 
-FT_API(int) GetMaxLabelLenght(void* hPtr)
+FT_API(int) GetMaxLabelLength(void* hPtr)
 {
     auto fastText = static_cast<FastText*>(hPtr);
     auto dict = fastText->getDictionary();
@@ -60,6 +80,33 @@ FT_API(int) GetLabels(void* hPtr, char*** labels)
 
     *labels = localLabels;
     return numLabels;
+}
+
+FT_API(int) GetNN(void* hPtr, const char* input, char*** predictedNeighbors, float* predictedProbabilities, const int n)
+{
+    auto fastText = static_cast<FastText*>(hPtr);
+
+    const auto predictions = fastText->getNN(input, n);
+	
+    if (predictions.empty())
+    {
+        return 0;
+    }
+
+    const int length = fmin(predictions.size(), n);
+    const auto labels = new char* [length];
+    for (auto i = 0; i < length; ++i)
+    {
+	    const auto len = predictions[i].second.length();
+        labels[i] = new char[len + 1];
+        predictions[i].second.copy(labels[i], len);
+        labels[i][len] = '\0';
+        predictedProbabilities[i] = predictions[i].first;
+    }
+
+    *(predictedNeighbors) = labels;
+
+    return length;
 }
 
 FT_API(void) TrainSupervised(void* hPtr, const char* input, const char* output, SupervisedArgs trainArgs, const char* labelPrefix)

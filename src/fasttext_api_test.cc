@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
 
     if (argc < 4)
     {
-        cout << "Usage: fasttext-test [train|load] train_data_path model_path";
+        cout << "Usage: fasttext-test [train|load|nn] train_data_path model_path";
         return 1;
     }
 
@@ -25,36 +25,48 @@ int main(int argc, char** argv) {
 
         TrainSupervised(hPtr, argv[2], argv[3], args, nullptr);
     }
-    else if (strcmp(argv[1], "load") == 0)
+    else if (strcmp(argv[1], "load") == 0 || strcmp(argv[1], "nn") == 0)
     {
         LoadModel(hPtr, argv[3]);
     }
     else
     {
-        cout << "Usage: fasttext-test [train|load] train_data_path model_path";
+        cout << "Usage: fasttext-test [train|load|nn] train_data_path model_path";
         return 1;
     }
 
-    float* vectors;
-    int dim = GetSentenceVector(hPtr, "what is the difference between a new york strip and a bone-in new york cut sirloin", &vectors);
-    DestroyVector(vectors);
+    if (strcmp(argv[1], "load") == 0)
+    {
+	    float* vectors;
+	    int dim = GetSentenceVector(hPtr, "what is the difference between a new york strip and a bone-in new york cut sirloin", &vectors);
+	    DestroyVector(vectors);
 
-    char** labels;
-    int nLabels = GetLabels(hPtr, &labels);
-    DestroyStrings(labels, nLabels);
+	    char** labels;
+	    int nLabels = GetLabels(hPtr, &labels);
+	    DestroyStrings(labels, nLabels);
 
 
-    char* buff;
+	    char* buff;
 
-    float prob = PredictSingle(hPtr, "what is the difference between a new york strip and a bone-in new york cut sirloin ?", &buff);
+	    float prob = PredictSingle(hPtr, "what is the difference between a new york strip and a bone-in new york cut sirloin ?", &buff);
 
-    char** buffers;
-    float* probs = new float[5];
+	    char** buffers;
+	    float* probs = new float[5];
 
-    int cnt = PredictMultiple(hPtr,"what is the difference between a new york strip and a bone-in new york cut sirloin ?", &buffers, probs, 5);
+	    int cnt = PredictMultiple(hPtr,"what is the difference between a new york strip and a bone-in new york cut sirloin ?", &buffers, probs, 5);
 
-    DestroyString(buff);
-    DestroyStrings(buffers, 5);
+	    DestroyString(buff);
+	    DestroyStrings(buffers, 5);
+    }
+	else
+	{
+		char** buffers;
+	    float* probs = new float[5];
+
+	    int cnt = GetNN(hPtr,"train", &buffers, probs, 5);
+
+	    DestroyStrings(buffers, 5);
+	}
 
     DestroyFastText(hPtr);
     return 0;
