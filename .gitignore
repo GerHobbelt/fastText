@@ -4,7 +4,9 @@
 *.vec
 *.bc
 .DS_Store
-data
+tests/data
+tests/models/*
+!tests/models/placeholder
 fasttext
 result
 

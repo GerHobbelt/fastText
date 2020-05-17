@@ -44,11 +44,11 @@ fi
 data_result="${DATADIR}"/cooking.train
 if [ ! -f "$data_result" ]
 then
-  head -n 12404 "${DATADIR}"/cooking/cooking.preprocessed.txt > "${DATADIR}"/cooking.train
+  head -n 12404 "${DATADIR}"/cooking/cooking.preprocessed.txt > "${DATADIR}"/cooking.train.txt
 fi
 
 data_result="${DATADIR}"/cooking.valid
 if [ ! -f "$data_result" ]
 then
-  tail -n 3000 "${DATADIR}"/cooking/cooking.preprocessed.txt > "${DATADIR}"/cooking.valid
+  tail -n 3000 "${DATADIR}"/cooking/cooking.preprocessed.txt > "${DATADIR}"/cooking.valid.txt
 fi

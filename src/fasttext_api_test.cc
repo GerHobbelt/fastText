@@ -1,21 +1,23 @@
+#define CATCH_CONFIG_MAIN
+#include "catch.h"
+
 #include <iostream>
 #include <cstring>
+#include <fstream>
+#include <string>
 #include "fasttext_api.h"
 
 using std::cout;
+using std::string;
 
-// Usage: fasttext-test [train|load] train_data_path model_path
-int main(int argc, char** argv) {
-    auto hPtr = CreateFastText();
+bool file_exists(const char *filename);
+bool vector_has_nonzero_elements(const float* vector, int size);
 
-    if (argc < 4)
+TEST_CASE("Can train, load and use supervised models", "[C API]")
+{
+    SECTION("Can train model")
     {
-        cout << "Usage: fasttext-test [train|load|nn] train_data_path model_path";
-        return 1;
-    }
-
-    if (strcmp(argv[1], "train") == 0)
-    {
+        auto hPtr = CreateFastText();
         SupervisedArgs args;
         args.Epochs = 25;
         args.LearningRate = 1.0;
@@ -23,51 +25,108 @@ int main(int argc, char** argv) {
         args.Verbose = 2;
         args.Threads = 1;
 
-        TrainSupervised(hPtr, argv[2], argv[3], args, nullptr);
+        TrainSupervised(hPtr, "tests/cooking/cooking.train", "tests/models/test", args, nullptr);
+
+        DestroyFastText(hPtr);
+
+        REQUIRE(file_exists("tests/models/test.bin"));
+        REQUIRE(file_exists("tests/models/test.vec"));
     }
-    else if (strcmp(argv[1], "load") == 0 || strcmp(argv[1], "nn") == 0)
+
+    SECTION("Can load model")
     {
-        LoadModel(hPtr, argv[3]);
+        REQUIRE(file_exists("tests/models/test.bin"));
+        REQUIRE(file_exists("tests/models/test.vec"));
+
+        auto hPtr = CreateFastText();
+
+        LoadModel(hPtr, "tests/models/test.bin");
+
+        SECTION("Can get sentence vector")
+        {
+            float* vector;
+            int dim = GetSentenceVector(hPtr, "what is the difference between a new york strip and a bone-in new york cut sirloin", &vector);
+
+            REQUIRE(dim == 100);
+            REQUIRE(vector_has_nonzero_elements(vector, dim));
+
+            DestroyVector(vector);
+        }
+
+        SECTION("Can get model labels")
+        {
+            char** labels;
+            int nLabels = GetLabels(hPtr, &labels);
+
+            REQUIRE(nLabels == 735);
+
+            for (int i = 0; i<nLabels; ++i) {
+                REQUIRE(!string(labels[i]).empty());
+            }
+
+            DestroyStrings(labels, nLabels);
+        }
+
+        SECTION("Can predict single label")
+        {
+            char* buff;
+	        float prob = PredictSingle(hPtr, "what is the difference between a new york strip and a bone-in new york cut sirloin ?", &buff);
+
+	        REQUIRE(prob > 0);
+	        REQUIRE(!string(buff).empty());
+
+	        DestroyString(buff);
+        }
+
+        SECTION("Can predict multiple labels")
+        {
+            char** buffers;
+            float* probs = new float[5];
+
+            int cnt = PredictMultiple(hPtr,"what is the difference between a new york strip and a bone-in new york cut sirloin ?", &buffers, probs, 5);
+
+            REQUIRE(cnt == 5);
+
+            for (int i = 0; i<cnt; ++i) {
+                REQUIRE(!string(buffers[i]).empty());
+                REQUIRE(probs[i] > 0);
+            }
+
+            DestroyStrings(buffers, 5);
+        }
+
+        SECTION("Can get nearest neighbours")
+        {
+            char** buffers;
+            float* probs = new float[5];
+
+            int cnt = GetNN(hPtr, "train", &buffers, probs, 5);
+
+            REQUIRE(cnt == 5);
+
+            for (int i = 0; i<cnt; ++i) {
+                REQUIRE(!string(buffers[i]).empty());
+                REQUIRE(probs[i] > 0);
+            }
+
+            DestroyStrings(buffers, 5);
+        }
+
+        DestroyFastText(hPtr);
     }
-    else
-    {
-        cout << "Usage: fasttext-test [train|load|nn] train_data_path model_path";
-        return 1;
+}
+
+bool vector_has_nonzero_elements(const float* vector, int size)
+{
+    for (int i = 0; i<size; ++i) {
+        if (vector[i] != 0)
+            return true;
     }
 
-    if (strcmp(argv[1], "load") == 0)
-    {
-	    float* vectors;
-	    int dim = GetSentenceVector(hPtr, "what is the difference between a new york strip and a bone-in new york cut sirloin", &vectors);
-	    DestroyVector(vectors);
+    return false;
+}
 
-	    char** labels;
-	    int nLabels = GetLabels(hPtr, &labels);
-	    DestroyStrings(labels, nLabels);
-
-
-	    char* buff;
-
-	    float prob = PredictSingle(hPtr, "what is the difference between a new york strip and a bone-in new york cut sirloin ?", &buff);
-
-	    char** buffers;
-	    float* probs = new float[5];
-
-	    int cnt = PredictMultiple(hPtr,"what is the difference between a new york strip and a bone-in new york cut sirloin ?", &buffers, probs, 5);
-
-	    DestroyString(buff);
-	    DestroyStrings(buffers, 5);
-    }
-	else
-	{
-		char** buffers;
-	    float* probs = new float[5];
-
-	    int cnt = GetNN(hPtr,"train", &buffers, probs, 5);
-
-	    DestroyStrings(buffers, 5);
-	}
-
-    DestroyFastText(hPtr);
-    return 0;
+bool file_exists(const char *filename)
+{
+    return static_cast<bool>(std::ifstream(filename));
 }
