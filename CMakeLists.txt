@@ -56,7 +56,7 @@ set(SOURCE_FILES
     src/fasttext_api.cc)
 
 
-if (NOT MSVC)
+if ((NOT MSVC) AND (NOT APPLE))
   include(GNUInstallDirs)
   configure_file("fasttext.pc.in" "fasttext.pc" @ONLY)
   install(FILES "${CMAKE_BINARY_DIR}/fasttext.pc" DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
