@@ -39,7 +39,7 @@ jobs:
           mkdir build
           cd build
           cmake -DCMAKE_BUILD_TYPE=Release ..
-          cmake --build . --config Release --target fasttext-shared
+          cmake --build . --config Release --target fasttext-shared fasttext-api-test
       - name: Run tests
         run: ./build/fasttext-test
       - name: Make Nuget package
@@ -61,7 +61,7 @@ jobs:
           mkdir build
           cd build
           cmake -DCMAKE_GENERATOR_PLATFORM=x64 ..
-          cmake --build . --config Release --target fasttext-shared
+          cmake --build . --config Release --target fasttext-shared fasttext-api-test
       - name: Run tests
         run: ./build/fasttext-test
       - name: Make Nuget package
