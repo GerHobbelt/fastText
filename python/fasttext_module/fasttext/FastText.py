@@ -21,9 +21,64 @@ EOS = "</s>"
 BOW = "<"
 EOW = ">"
 
+displayed_errors = {}
 
-def eprint(cls, *args, **kwargs):
+
+def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+
+
+class _Meter(object):
+    def __init__(self, fasttext_model, meter):
+        self.f = fasttext_model
+        self.m = meter
+
+    def score_vs_true(self, label):
+        """Return scores and the gold of each sample for a specific label"""
+        label_id = self.f.get_label_id(label)
+        pair_list = self.m.scoreVsTrue(label_id)
+
+        if pair_list:
+            y_scores, y_true = zip(*pair_list)
+        else:
+            y_scores, y_true = ([], ())
+
+        return np.array(y_scores, copy=False), np.array(y_true, copy=False)
+
+    def precision_recall_curve(self, label=None):
+        """Return precision/recall curve"""
+        if label:
+            label_id = self.f.get_label_id(label)
+            pair_list = self.m.precisionRecallCurveLabel(label_id)
+        else:
+            pair_list = self.m.precisionRecallCurve()
+
+        if pair_list:
+            precision, recall = zip(*pair_list)
+        else:
+            precision, recall = ([], ())
+
+        return np.array(precision, copy=False), np.array(recall, copy=False)
+
+    def precision_at_recall(self, recall, label=None):
+        """Return precision for a given recall"""
+        if label:
+            label_id = self.f.get_label_id(label)
+            precision = self.m.precisionAtRecallLabel(label_id, recall)
+        else:
+            precision = self.m.precisionAtRecall(recall)
+
+        return precision
+
+    def recall_at_precision(self, precision, label=None):
+        """Return recall for a given precision"""
+        if label:
+            label_id = self.f.get_label_id(label)
+            recall = self.m.recallAtPrecisionLabel(label_id, precision)
+        else:
+            recall = self.m.recallAtPrecision(precision)
+
+        return recall
 
 
 class _FastText(object):
@@ -43,7 +98,9 @@ class _FastText(object):
             self.f.loadModel(model_path)
         self._words = None
         self._labels = None
+        self.set_args(args)
 
+    def set_args(self, args=None):
         if args:
             arg_names = ['lr', 'dim', 'ws', 'epoch', 'minCount',
                          'minCountLabel', 'minn', 'maxn', 'neg', 'wordNgrams',
@@ -84,12 +141,26 @@ class _FastText(object):
         self.f.getSentenceVector(b, text)
         return np.array(b)
 
+    def get_nearest_neighbors(self, word, k=10, on_unicode_error='strict'):
+        return self.f.getNN(word, k, on_unicode_error)
+
+    def get_analogies(self, wordA, wordB, wordC, k=10,
+                      on_unicode_error='strict'):
+        return self.f.getAnalogies(wordA, wordB, wordC, k, on_unicode_error)
+
     def get_word_id(self, word):
         """
         Given a word, get the word id within the dictionary.
         Returns -1 if word is not in the dictionary.
         """
         return self.f.getWordId(word)
+
+    def get_label_id(self, label):
+        """
+        Given a label, get the label id within the dictionary.
+        Returns -1 if label is not in the dictionary.
+        """
+        return self.f.getLabelId(label)
 
     def get_subword_id(self, subword):
         """
@@ -146,21 +217,23 @@ class _FastText(object):
 
         if type(text) == list:
             text = [check(entry) for entry in text]
-            predictions = self.f.multilinePredict(text, k, threshold, on_unicode_error)
-            dt = np.dtype([('probability', 'float64'), ('label', 'object')])
-            result_as_pair = np.array(predictions, dtype=dt)
+            all_labels, all_probs = self.f.multilinePredict(
+                text, k, threshold, on_unicode_error)
 
-            return result_as_pair['label'].tolist(), result_as_pair['probability']
+            return all_labels, all_probs
         else:
             text = check(text)
             predictions = self.f.predict(text, k, threshold, on_unicode_error)
-            probs, labels = zip(*predictions)
+            if predictions:
+                probs, labels = zip(*predictions)
+            else:
+                probs, labels = ([], ())
 
             return labels, np.array(probs, copy=False)
 
     def get_input_matrix(self):
         """
-        Get a copy of the full input matrix of a Model. This only
+        Get a reference to the full input matrix of a Model. This only
         works if the model is not quantized.
         """
         if self.f.isQuant():
@@ -169,7 +242,7 @@ class _FastText(object):
 
     def get_output_matrix(self):
         """
-        Get a copy of the full output matrix of a Model. This only
+        Get a reference to the full output matrix of a Model. This only
         works if the model is not quantized.
         """
         if self.f.isQuant():
@@ -232,9 +305,9 @@ class _FastText(object):
         """Save the model to the given path"""
         self.f.saveModel(path)
 
-    def test(self, path, k=1):
+    def test(self, path, k=1, threshold=0.0):
         """Evaluate supervised model using file given by path"""
-        return self.f.test(path, k)
+        return self.f.test(path, k, threshold)
 
     def test_label(self, path, k=1, threshold=0.0):
         """
@@ -246,6 +319,11 @@ class _FastText(object):
         {'__label__italian-cuisine' : {'precision' : 0.7, 'recall' : 0.74}}
         """
         return self.f.testLabel(path, k, threshold)
+
+    def get_meter(self, path, k=-1):
+        meter = _Meter(self, self.f.getMeter(path, k))
+
+        return meter
 
     def quantize(
         self,
@@ -281,6 +359,14 @@ class _FastText(object):
             input, qout, cutoff, retrain, epoch, lr, thread, verbose, dsub,
             qnorm
         )
+
+    def set_matrices(self, input_matrix, output_matrix):
+        """
+        Set input and output matrices. This function assumes you know what you
+        are doing.
+        """
+        self.f.setMatrices(input_matrix.astype(np.float32),
+                           output_matrix.astype(np.float32))
 
     @property
     def words(self):
@@ -356,41 +442,41 @@ def load_model(path):
 
 
 unsupervised_default = {
-    'model' : "skipgram",
-    'lr' : 0.05,
-    'dim' : 100,
-    'ws' : 5,
-    'epoch' : 5,
-    'minCount' : 5,
-    'minCountLabel' : 0,
-    'minn' : 3,
-    'maxn' : 6,
-    'neg' : 5,
-    'wordNgrams' : 1,
-    'loss' : "ns",
-    'bucket' : 2000000,
-    'thread' : multiprocessing.cpu_count() - 1,
-    'lrUpdateRate' : 100,
-    't' : 1e-4,
-    'label' : "__label__",
-    'verbose' : 2,
-    'pretrainedVectors' : "",
-    'seed' : 0,
-    'autotuneValidationFile' : "",
-    'autotuneMetric' : "f1",
-    'autotunePredictions' : 1,
-    'autotuneDuration' : 60 * 5,  # 5 minutes
-    'autotuneModelSize' : ""
+    'model': "skipgram",
+    'lr': 0.05,
+    'dim': 100,
+    'ws': 5,
+    'epoch': 5,
+    'minCount': 5,
+    'minCountLabel': 0,
+    'minn': 3,
+    'maxn': 6,
+    'neg': 5,
+    'wordNgrams': 1,
+    'loss': "ns",
+    'bucket': 2000000,
+    'thread': multiprocessing.cpu_count() - 1,
+    'lrUpdateRate': 100,
+    't': 1e-4,
+    'label': "__label__",
+    'verbose': 2,
+    'pretrainedVectors': "",
+    'seed': 0,
+    'autotuneValidationFile': "",
+    'autotuneMetric': "f1",
+    'autotunePredictions': 1,
+    'autotuneDuration': 60 * 5,  # 5 minutes
+    'autotuneModelSize': ""
 }
 
 
 def read_args(arg_list, arg_dict, arg_names, default_values):
     param_map = {
-        'min_count' : 'minCount',
-        'word_ngrams' : 'wordNgrams',
-        'lr_update_rate' : 'lrUpdateRate',
-        'label_prefix' : 'label',
-        'pretrained_vectors' : 'pretrainedVectors'
+        'min_count': 'minCount',
+        'word_ngrams': 'wordNgrams',
+        'lr_update_rate': 'lrUpdateRate',
+        'label_prefix': 'label',
+        'pretrained_vectors': 'pretrainedVectors'
     }
 
     ret = {}
@@ -427,24 +513,25 @@ def train_supervised(*kargs, **kwargs):
     """
     supervised_default = unsupervised_default.copy()
     supervised_default.update({
-        'lr' : 0.1,
-        'minCount' : 1,
-        'minn' : 0,
-        'maxn' : 0,
-        'loss' : "softmax",
-        'model' : "supervised"
+        'lr': 0.1,
+        'minCount': 1,
+        'minn': 0,
+        'maxn': 0,
+        'loss': "softmax",
+        'model': "supervised"
     })
 
     arg_names = ['input', 'lr', 'dim', 'ws', 'epoch', 'minCount',
-        'minCountLabel', 'minn', 'maxn', 'neg', 'wordNgrams', 'loss', 'bucket',
-        'thread', 'lrUpdateRate', 't', 'label', 'verbose', 'pretrainedVectors',
-        'seed', 'autotuneValidationFile', 'autotuneMetric',
-        'autotunePredictions', 'autotuneDuration', 'autotuneModelSize']
+                 'minCountLabel', 'minn', 'maxn', 'neg', 'wordNgrams', 'loss', 'bucket',
+                 'thread', 'lrUpdateRate', 't', 'label', 'verbose', 'pretrainedVectors',
+                 'seed', 'autotuneValidationFile', 'autotuneMetric',
+                 'autotunePredictions', 'autotuneDuration', 'autotuneModelSize']
     args, manually_set_args = read_args(kargs, kwargs, arg_names,
                                         supervised_default)
     a = _build_args(args, manually_set_args)
     ft = _FastText(args=a)
     fasttext.train(ft.f, a)
+    ft.set_args(ft.f.getArgs())
     return ft
 
 
@@ -463,13 +550,14 @@ def train_unsupervised(*kargs, **kwargs):
     part of the fastText repository.
     """
     arg_names = ['input', 'model', 'lr', 'dim', 'ws', 'epoch', 'minCount',
-        'minCountLabel', 'minn', 'maxn', 'neg', 'wordNgrams', 'loss', 'bucket',
-        'thread', 'lrUpdateRate', 't', 'label', 'verbose', 'pretrainedVectors']
+                 'minCountLabel', 'minn', 'maxn', 'neg', 'wordNgrams', 'loss', 'bucket',
+                 'thread', 'lrUpdateRate', 't', 'label', 'verbose', 'pretrainedVectors']
     args, manually_set_args = read_args(kargs, kwargs, arg_names,
                                         unsupervised_default)
     a = _build_args(args, manually_set_args)
     ft = _FastText(args=a)
     fasttext.train(ft.f, a)
+    ft.set_args(ft.f.getArgs())
     return ft
 
 

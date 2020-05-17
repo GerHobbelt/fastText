@@ -2,6 +2,8 @@
 *.o
 *.bin
 *.vec
+*.bc
+.DS_Store
 data
 fasttext
 result
@@ -121,3 +123,6 @@ Temporary Items
 .apdisk
 
 # End of https://www.gitignore.io/api/macos,clion
+website/node_modules/
+package-lock.json
+node_modules/
