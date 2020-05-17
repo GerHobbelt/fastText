@@ -15,8 +15,6 @@ bool vector_has_nonzero_elements(const float* vector, int size);
 
 TEST_CASE("Can train, load and use supervised models", "[C API]")
 {
-    REQUIRE(false);
-
     SECTION("Can train model")
     {
         auto hPtr = CreateFastText();
