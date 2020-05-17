@@ -19,7 +19,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --config Release --target fasttext-shared
       - name: Run tests
-        run: ./fasttext-test
+        run: ./build/fasttext-test
       - name: Make Nuget package
         env:
           APITOKEN: ${{ secrets.NugetToken }}
@@ -41,7 +41,7 @@ jobs:
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --config Release --target fasttext-shared
       - name: Run tests
-        run: ./fasttext-test
+        run: ./build/fasttext-test
       - name: Make Nuget package
         env:
           APITOKEN: ${{ secrets.NugetToken }}
@@ -63,7 +63,7 @@ jobs:
           cmake -DCMAKE_GENERATOR_PLATFORM=x64 ..
           cmake --build . --config Release --target fasttext-shared
       - name: Run tests
-        run: ./fasttext-test
+        run: ./build/fasttext-test
       - name: Make Nuget package
         env:
           APITOKEN: ${{ secrets.NugetToken }}
