@@ -5,6 +5,7 @@
 #include <cstring>
 #include <fstream>
 #include <string>
+#include <cstdio>
 #include "fasttext_api.h"
 
 using std::cout;
@@ -15,7 +16,7 @@ bool vector_has_nonzero_elements(const float* vector, int size);
 
 TEST_CASE("Can train, load and use supervised models", "[C API]")
 {
-    SECTION("Can train model")
+    SECTION("Can train model with super old API")
     {
         auto hPtr = CreateFastText();
         SupervisedArgs args;
@@ -27,6 +28,27 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
 
         TrainSupervised(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", args, nullptr);
 
+        DestroyFastText(hPtr);
+
+        REQUIRE(file_exists("tests/models/test.bin"));
+        REQUIRE(file_exists("tests/models/test.vec"));
+    }
+
+    SECTION("Can train model with new API")
+    {
+        std::remove("tests/models/test.bin");
+        std::remove("tests/models/test.vec");
+
+        REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+        REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+
+        auto hPtr = CreateFastText();
+        TrainingArgs* args;
+
+        GetDefaultSupervisedArgs(&args);
+        Supervised(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, nullptr, nullptr);
+
+        DestroyArgs(args);
         DestroyFastText(hPtr);
 
         REQUIRE(file_exists("tests/models/test.bin"));

@@ -35,6 +35,12 @@ typedef struct SupervisedArgs
 #pragma pack(push, 1)
 typedef struct TrainingArgs
 {
+    // Default values copied from args.cc:21
+    TrainingArgs();
+
+    // Default supervised from args.cc:110
+    static TrainingArgs* DefaultSuprevised();
+
     double lr;
     int lrUpdateRate;
     int dim;
@@ -53,33 +59,52 @@ typedef struct TrainingArgs
     double t;
     int verbose;
     bool saveOutput;
+    int seed;
 
     bool qout;
     bool retrain;
     bool qnorm;
     size_t cutoff;
     size_t dsub;
-} TrainingArgs;
+} FastTextArgs;
 #pragma pack(pop)
 
+// Model management
 FT_API(void*) CreateFastText();
 FT_API(void) LoadModel(void* hPtr, const char* path);
 FT_API(void) LoadModelData(void* hPtr, const char* data, long length);
 FT_API(void) DestroyFastText(void* hPtr);
-FT_API(int) GetMaxLabelLength(void* hPtr);
-FT_API(int) GetLabels(void* hPtr, char*** labels);
-FT_API(int) GetNN(void* hPtr, const char* input, char*** predictedNeighbors, float* predictedProbabilities, int n);
-FT_API(void) TrainSupervised(void* hPtr, const char* input, const char* output, SupervisedArgs trainArgs, const char* labelPrefix);
+
+// Resource management
 FT_API(void) DestroyString(char* string);
 FT_API(void) DestroyStrings(char** strings, int cnt);
+FT_API(void) DestroyVector(float* vector);
+
+// Label info
+FT_API(int) GetMaxLabelLength(void* hPtr);
+FT_API(int) GetLabels(void* hPtr, char*** labels);
+
+// Args
+FT_API(void) GetDefaultArgs(TrainingArgs** args);
+FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args);
+FT_API(void) DestroyArgs(TrainingArgs* args);
+
+// FastText commands
+FT_API(void) Supervised(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label, const char* pretrainedVectors);
+FT_API(int) GetNN(void* hPtr, const char* input, char*** predictedNeighbors, float* predictedProbabilities, int n);
+FT_API(int) GetSentenceVector(void* hPtr, const char* input, float** vector);
+
+// Predictions
 FT_API(float) PredictSingle(void* hPtr, const char* input, char** predicted);
 FT_API(int) PredictMultiple(void* hPtr, const char* input, char*** predictedLabels, float* predictedProbabilities, int n);
 
-FT_API(int) GetSentenceVector(void* hPtr, const char* input, float** vector);
-FT_API(void) DestroyVector(float* vector);
+// DEPRECATED
+FT_API(void) TrainSupervised(void* hPtr, const char* input, const char* output, SupervisedArgs trainArgs, const char* labelPrefix);
+FT_API(void) Train(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label, const char* pretrainedVectors);
 
-FT_API(void) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label, const char* pretrainedVectors);
-
-fasttext::Args CreateArgs(TrainingArgs args, const char* label, const char* pretrainedVectors);
+// Not exported
+fasttext::Args CreateArgs(FastTextArgs args, const char* label, const char* pretrainedVectors);
+bool EndsWith (std::string const &fullString, std::string const &ending, bool caseInsensitive = false);
+void ToLowerInplace(std::string& string);
 
 #endif //FASTTEXT_FASTTEXT_API_H
