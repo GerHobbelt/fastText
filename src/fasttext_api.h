@@ -121,8 +121,8 @@ FT_API(float) PredictSingle(void* hPtr, const char* input, char** predicted);
 FT_API(int) PredictMultiple(void* hPtr, const char* input, char*** predictedLabels, float* predictedProbabilities, int n);
 
 // DEPRECATED
-FT_API(void) TrainSupervised(void* hPtr, const char* input, const char* output, SupervisedArgs trainArgs, const char* labelPrefix);
-FT_API(void) Train(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label, const char* pretrainedVectors);
+FT_API(int) TrainSupervised(void* hPtr, const char* input, const char* output, SupervisedArgs trainArgs, const char* labelPrefix);
+FT_API(int) Train(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label, const char* pretrainedVectors);
 
 // Not exported
 fasttext::Args CreateArgs(FastTextArgs args, const char* label, const char* pretrainedVectors);

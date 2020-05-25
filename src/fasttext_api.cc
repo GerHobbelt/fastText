@@ -405,7 +405,7 @@ void DestroyArgs(TrainingArgs* args)
     delete args;
 }
 
-FT_API(void) TrainSupervised(void* hPtr, const char* input, const char* output, SupervisedArgs trainArgs, const char* labelPrefix)
+FT_API(int) TrainSupervised(void* hPtr, const char* input, const char* output, SupervisedArgs trainArgs, const char* labelPrefix)
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
     auto args = Args();
@@ -431,15 +431,27 @@ FT_API(void) TrainSupervised(void* hPtr, const char* input, const char* output, 
         args.thread = trainArgs.Threads;
     }
 
-    auto vectorsPath = std::string(output) + ".vec";
-    auto modelPath = std::string(output) + ".bin";
+    try {
+        auto vectorsPath = std::string(output)+".vec";
+        auto modelPath = std::string(output)+".bin";
 
-    fastText->train(args);
-    fastText->saveModel(modelPath);
-    fastText->saveVectors(vectorsPath);
+        fastText->train(args);
+        fastText->saveModel(modelPath);
+        fastText->saveVectors(vectorsPath);
+
+        return 0;
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        return -1;
+    }
 }
 
-FT_API(void) Train(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label,
+FT_API(int) Train(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label,
                    const char* pretrainedVectors)
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
@@ -447,12 +459,24 @@ FT_API(void) Train(void* hPtr, const char* input, const char* output, FastTextAr
     args.input = std::string(input);
     args.output = std::string(output);
 
-    auto vectorsPath = std::string(output) + ".vec";
-    auto modelPath = std::string(output) + ".bin";
+    try {
+        auto vectorsPath = std::string(output)+".vec";
+        auto modelPath = std::string(output)+".bin";
 
-    fastText->train(args);
-    fastText->saveModel(modelPath);
-    fastText->saveVectors(vectorsPath);
+        fastText->train(args);
+        fastText->saveModel(modelPath);
+        fastText->saveVectors(vectorsPath);
+
+        return 0;
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        return -1;
+    }
 }
 
 //---------------------------------------------------

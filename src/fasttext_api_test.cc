@@ -64,7 +64,9 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         args.Verbose = 2;
         args.Threads = 1;
 
-        TrainSupervised(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", args, nullptr);
+        int result = TrainSupervised(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", args, nullptr);
+
+        REQUIRE(result == 0);
 
         DestroyFastText(hPtr);
 
@@ -84,7 +86,9 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         TrainingArgs* args;
 
         GetDefaultSupervisedArgs(&args);
-        Supervised(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, nullptr, nullptr);
+        int result = Supervised(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, nullptr, nullptr);
+
+        REQUIRE(result == 0);
 
         REQUIRE(IsModelReady(hPtr));
         REQUIRE(GetModelDimension(hPtr) == 100);
