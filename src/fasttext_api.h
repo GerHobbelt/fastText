@@ -74,6 +74,13 @@ typedef struct TrainingArgs
 class FastTextWrapper : public fasttext::FastText
 {
 public:
+    FastTextWrapper()
+    {
+        args_ = nullptr;
+        dict_ = nullptr;
+        model_ = nullptr;
+    }
+
     bool hasArgs() {return (bool)args_;}
     bool hasDict() {return (bool)dict_;}
     bool hasModel() {return (bool)model_;}
