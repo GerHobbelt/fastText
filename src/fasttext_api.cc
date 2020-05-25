@@ -468,10 +468,10 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, FastTextArg
     args.input = std::string(input);
     args.output = std::string(output);
 
-    try {
-        auto vectorsPath = std::string(output)+".vec";
-        auto modelPath = std::string(output)+".bin";
+    auto vectorsPath = std::string(output)+".vec";
+    auto modelPath = std::string(output)+".bin";
 
+    try {
         fastText->train(args);
         fastText->saveModel(modelPath);
         fastText->saveVectors(vectorsPath);
@@ -488,11 +488,6 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, FastTextArg
     }
 }
 
-//---------------------------------------------------
-
-//---------------------------------------------------
-//---------------------------------------------------
-//---------------------------------------------------
 fasttext::Args CreateArgs(FastTextArgs args, const char* label, const char* pretrainedVectors)
 {
     auto result = fasttext::Args();
