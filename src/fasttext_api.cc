@@ -210,11 +210,20 @@ FT_API(int) GetModelDimension(void* hPtr)
     return fastText->getDimension();
 }
 
+// Due to some crazy compiler bug we need to disable optimization for this function under Windows.
+#ifdef WIN32
+#pragma optimize( "", off )
+#endif
+
 FT_API(bool) IsModelReady(void* hPtr)
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
     return fastText->hasArgs() && fastText->hasDict() && fastText->hasModel();
 }
+
+#ifdef WIN32
+#pragma optimize( "", on )
+#endif
 
 FT_API(void) GetDefaultArgs(TrainingArgs** args)
 {

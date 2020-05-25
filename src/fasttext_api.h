@@ -4,15 +4,16 @@
 #include "args.h"
 #include "fasttext.h"
 #include <vector>
+#include <ostream>
 
 #ifdef FASTTEXT_EXPORTS
-    #if defined WIN32
+    #ifdef WIN32
         #define FT_API(RetType) extern "C" __declspec(dllexport) RetType
     #else
         #define FT_API(RetType) extern "C" RetType __attribute__((visibility("default")))
     #endif
 #else
-    #if defined WIN32
+    #ifdef WIN32
         #define FT_API(RetType) extern "C" __declspec(dllimport) RetType
     #else
         #define FT_API(RetType) extern "C" RetType
@@ -74,16 +75,10 @@ typedef struct TrainingArgs
 class FastTextWrapper : public fasttext::FastText
 {
 public:
-    FastTextWrapper()
-    {
-        args_ = nullptr;
-        dict_ = nullptr;
-        model_ = nullptr;
-    }
 
-    bool hasArgs() {return (bool)args_;}
-    bool hasDict() {return (bool)dict_;}
-    bool hasModel() {return (bool)model_;}
+    bool hasArgs() {return args_ != nullptr;}
+    bool hasDict() {return dict_ != nullptr;}
+    bool hasModel() {return model_ != nullptr;}
 };
 
 // Errors
