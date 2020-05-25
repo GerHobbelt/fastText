@@ -460,6 +460,10 @@ FT_API(int) TrainSupervised(void* hPtr, const char* input, const char* output, S
     }
 }
 
+#ifdef WIN32
+#pragma optimize( "", off )
+#endif
+
 FT_API(int) Train(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label,
                    const char* pretrainedVectors)
 {
@@ -487,6 +491,10 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, FastTextArg
         return -1;
     }
 }
+
+#ifdef WIN32
+#pragma optimize( "", on )
+#endif
 
 fasttext::Args CreateArgs(FastTextArgs args, const char* label, const char* pretrainedVectors)
 {
