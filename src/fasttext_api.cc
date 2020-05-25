@@ -53,35 +53,75 @@ TrainingArgs* TrainingArgs::DefaultSuprevised()
 
 //---------------------------------------------------
 
+static std::string _lastError;
+
+FT_API(void) GetLastErrorText(char** error)
+{
+    auto buff = new char[_lastError.length() + 1];
+    _lastError.copy(buff, _lastError.length(), 0);
+    buff[_lastError.length()] = '\0';
+
+    *error = buff;
+}
+
+//---------------------------------------------------
+
 FT_API(void*) CreateFastText()
 {
     auto result = new FastText();
     return result;
 }
 
-FT_API(void) LoadModel(void* hPtr, const char* path)
+FT_API(int) LoadModel(void* hPtr, const char* path)
 {
     auto fastText = static_cast<FastText*>(hPtr);
-    fastText->loadModel(path);
+
+    try {
+        fastText->loadModel(path);
+
+        return 0;
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        return -1;
+    }
 }
 
-FT_API(void) LoadModelData(void* hPtr, const char* data, const long length)
+FT_API(int) LoadModelData(void* hPtr, const char* data, const long length)
 {
-	const auto FASTTEXT_VERSION = 12; /* Version 1b */
-	const auto FASTTEXT_FILEFORMAT_MAGIC_INT32 = 793712314;
-	auto fastText = static_cast<FastText*>(hPtr);
-	std::istrstream stream(data, length);
-	int32_t magic;
-	int32_t version;
-	stream.read(reinterpret_cast<char*>(&magic), sizeof(int32_t));
-	if (magic != FASTTEXT_FILEFORMAT_MAGIC_INT32) {
-		throw std::invalid_argument("Data has wrong format!");
-	}
-	stream.read(reinterpret_cast<char*>(&version), sizeof(int32_t));
-	if (version > FASTTEXT_VERSION) {
-		throw std::invalid_argument("Data has wrong format!");
-	}
-	fastText->loadModel(stream);
+    auto fastText = static_cast<FastText*>(hPtr);
+
+    try {
+        const auto FASTTEXT_VERSION = 12; /* Version 1b */
+        const auto FASTTEXT_FILEFORMAT_MAGIC_INT32 = 793712314;
+
+        std::istrstream stream(data, length);
+        int32_t magic;
+        int32_t version;
+        stream.read(reinterpret_cast<char*>(&magic), sizeof(int32_t));
+        if (magic != FASTTEXT_FILEFORMAT_MAGIC_INT32) {
+            throw std::invalid_argument("Model magic signature mismatch!");
+        }
+        stream.read(reinterpret_cast<char*>(&version), sizeof(int32_t));
+        if (version > FASTTEXT_VERSION) {
+            throw std::invalid_argument("Model version mismatch!");
+        }
+        fastText->loadModel(stream);
+
+        return 0;
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        return -1;
+    }
 }
 
 FT_API(void) DestroyFastText(void* hPtr)
@@ -119,16 +159,26 @@ FT_API(int) GetMaxLabelLength(void* hPtr)
     int numLabels = dict->nlabels();
     int maxLen = 0;
 
-    for (int i = 0; i < numLabels; ++i)
-    {
-        auto label = dict->getLabel(i);
-        if (label.length() > maxLen)
+    try {
+        for (int i = 0; i < numLabels; ++i)
         {
-            maxLen = label.length();
+            auto label = dict->getLabel(i);
+            if (label.length() > maxLen)
+            {
+                maxLen = label.length();
+            }
         }
-    }
 
-    return maxLen;
+        return maxLen;
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        return -1;
+    }
 }
 
 FT_API(int) GetLabels(void* hPtr, char*** labels)
@@ -136,7 +186,7 @@ FT_API(int) GetLabels(void* hPtr, char*** labels)
     auto fastText = static_cast<FastText*>(hPtr);
     auto dict = fastText->getDictionary();
     int numLabels = dict->nlabels();
-    auto localLabels = new char*[numLabels];
+    auto localLabels = new char*[numLabels] {nullptr};
 
     for (int i = 0; i < numLabels; ++i)
     {
@@ -161,14 +211,14 @@ FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args)
 {
     *args = TrainingArgs::DefaultSuprevised();
 }
+//---------------------------------------------------
+
 void DestroyArgs(TrainingArgs* args)
 {
     delete args;
 }
 
-//---------------------------------------------------
-
-FT_API(void) Supervised(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label,
+FT_API(int) Supervised(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label,
         const char* pretrainedVectors)
 {
     auto fastText = static_cast<FastText*>(hPtr);
@@ -177,36 +227,56 @@ FT_API(void) Supervised(void* hPtr, const char* input, const char* output, FastT
     args.output = std::string(output);
     args.model = model_name::sup;
 
-    if (EndsWith(args.output, ".bin"))
-    {
-        args.output = args.output.substr(0, args.output.length() - 4);
+    if (EndsWith(args.output, ".bin")) {
+        args.output = args.output.substr(0, args.output.length()-4);
     }
 
-    auto modelPath = args.output + ".bin";
-    auto vectorsPath = args.output + ".vec";
+    auto modelPath = args.output+".bin";
+    auto vectorsPath = args.output+".vec";
 
-    fastText->train(args);
-    fastText->saveModel(modelPath);
-    fastText->saveVectors(vectorsPath);
+    try {
+        fastText->train(args);
+        fastText->saveModel(modelPath);
+        fastText->saveVectors(vectorsPath);
+
+        return 0;
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        return -1;
+    }
 }
 
 FT_API(int) GetNN(void* hPtr, const char* input, char*** predictedNeighbors, float* predictedProbabilities, const int n)
 {
     auto fastText = static_cast<FastText*>(hPtr);
+    std::vector<std::pair<real, std::string>> predictions;
 
-    const auto predictions = fastText->getNN(input, n);
-	
-    if (predictions.empty())
-    {
-        return 0;
+    try {
+        predictions = fastText->getNN(input, n);
+
+        if (predictions.empty()) {
+            return 0;
+        }
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        return -1;
     }
 
-    const int length = fmin(predictions.size(), n);
-    const auto labels = new char* [length];
-    for (auto i = 0; i < length; ++i)
-    {
-	    const auto len = predictions[i].second.length();
-        labels[i] = new char[len + 1];
+    int length = fmin(predictions.size(), n);
+    auto labels = new char* [length] {nullptr};
+    for (auto i = 0; i<length; ++i) {
+        const auto len = predictions[i].second.length();
+        labels[i] = new char[len+1];
         predictions[i].second.copy(labels[i], len);
         labels[i][len] = '\0';
         predictedProbabilities[i] = predictions[i].first;
@@ -223,15 +293,25 @@ FT_API(int) GetSentenceVector(void* hPtr, const char* input, float** vector)
     Vector svec(fastText->getDimension());
     std::istringstream inStream(input);
 
-    fastText->getSentenceVector(inStream, svec);
+    try {
+        fastText->getSentenceVector(inStream, svec);
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        return -1;
+    }
 
-    float* vec = new float[svec.size()];
-    size_t sz = sizeof(float) * svec.size();
+    auto vec = new float[svec.size()];
+    size_t sz = sizeof(float)*svec.size();
     memcpy(vec, svec.data(), sz);
 
     *vector = vec;
 
-    return (int)svec.size();
+    return (int) svec.size();
 }
 
 //---------------------------------------------------
@@ -242,14 +322,22 @@ FT_API(float) PredictSingle(void* hPtr, const char* input, char** predicted)
     std::vector<std::pair<real,std::string>> predictions;
     std::istringstream inStream(input);
 
-    if (!fastText->predictLine(inStream, predictions, 1, 0))
-    {
-        return 0;
-    }
+    try {
+        if (!fastText->predictLine(inStream, predictions, 1, 0)) {
+            return 0;
+        }
 
-    if (predictions.size() == 0)
-    {
-        return 0;
+        if (predictions.empty()) {
+            return 0;
+        }
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        return -1;
     }
 
     auto len = predictions[0].second.length();
@@ -268,14 +356,22 @@ FT_API(int) PredictMultiple(void* hPtr, const char* input, char*** predictedLabe
     std::vector<std::pair<real,std::string>> predictions;
     std::istringstream inStream(input);
 
-    if (!fastText->predictLine(inStream, predictions, n, 0))
-    {
-        return 0;
-    }
+    try {
+        if (!fastText->predictLine(inStream, predictions, n, 0)) {
+            return 0;
+        }
 
-    if (predictions.size() == 0)
-    {
-        return 0;
+        if (predictions.size()==0) {
+            return 0;
+        }
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        return -1;
     }
 
     int cnt = fmin(predictions.size(), n);
@@ -348,6 +444,7 @@ FT_API(void) Train(void* hPtr, const char* input, const char* output, FastTextAr
 
 //---------------------------------------------------
 
+//---------------------------------------------------
 fasttext::Args CreateArgs(FastTextArgs args, const char* label, const char* pretrainedVectors)
 {
     auto result = fasttext::Args();

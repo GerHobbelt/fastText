@@ -69,10 +69,13 @@ typedef struct TrainingArgs
 } FastTextArgs;
 #pragma pack(pop)
 
+// Errors
+FT_API(void) GetLastErrorText(char** error);
+
 // Model management
 FT_API(void*) CreateFastText();
-FT_API(void) LoadModel(void* hPtr, const char* path);
-FT_API(void) LoadModelData(void* hPtr, const char* data, long length);
+FT_API(int) LoadModel(void* hPtr, const char* path);
+FT_API(int) LoadModelData(void* hPtr, const char* data, long length);
 FT_API(void) DestroyFastText(void* hPtr);
 
 // Resource management
@@ -90,7 +93,7 @@ FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args);
 FT_API(void) DestroyArgs(TrainingArgs* args);
 
 // FastText commands
-FT_API(void) Supervised(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label, const char* pretrainedVectors);
+FT_API(int) Supervised(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label, const char* pretrainedVectors);
 FT_API(int) GetNN(void* hPtr, const char* input, char*** predictedNeighbors, float* predictedProbabilities, int n);
 FT_API(int) GetSentenceVector(void* hPtr, const char* input, float** vector);
 

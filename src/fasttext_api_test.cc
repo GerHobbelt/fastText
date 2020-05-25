@@ -16,11 +16,30 @@ bool vector_has_nonzero_elements(const float* vector, int size);
 
 TEST_CASE("Can train, load and use supervised models", "[C API]")
 {
+    SECTION("Can handle errors")
+    {
+        auto hPtr = CreateFastText();
+        TrainingArgs* args;
+
+        GetDefaultSupervisedArgs(&args);
+
+        int result = Supervised(hPtr, "not/a/valid.file", "tests/models/test", *args, nullptr, nullptr);
+        REQUIRE(result == -1);
+
+        char* buff;
+        GetLastErrorText(&buff);
+        REQUIRE(std::string(buff) == "not/a/valid.file cannot be opened for training!");
+
+        DestroyString(buff);
+        DestroyArgs(args);
+        DestroyFastText(hPtr);
+    }
+
     SECTION("Can train model with super old API")
     {
         auto hPtr = CreateFastText();
         SupervisedArgs args;
-        args.Epochs = 25;
+        args.Epochs = 10;
         args.LearningRate = 1.0;
         args.WordNGrams = 3;
         args.Verbose = 2;
@@ -132,6 +151,18 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
             }
 
             DestroyStrings(buffers, 5);
+        }
+
+        SECTION("Can get sentence vector")
+        {
+            float* vector;
+
+            int len = GetSentenceVector(hPtr, "This is only a test!", &vector);
+
+            REQUIRE(len == 100);
+            REQUIRE(vector_has_nonzero_elements(vector, len));
+
+            DestroyVector(vector);
         }
 
         DestroyFastText(hPtr);
