@@ -2,6 +2,7 @@
 #define FASTTEXT_FASTTEXT_API_H
 
 #include "args.h"
+#include "fasttext.h"
 #include <vector>
 
 #ifdef FASTTEXT_EXPORTS
@@ -69,6 +70,15 @@ typedef struct TrainingArgs
 } FastTextArgs;
 #pragma pack(pop)
 
+// Yeah, so we need to have this Public Morozov in here to circumvent some FastText design flaws.
+class FastTextWrapper : public fasttext::FastText
+{
+public:
+    bool hasArgs() {return (bool)args_;}
+    bool hasDict() {return (bool)dict_;}
+    bool hasModel() {return (bool)model_;}
+};
+
 // Errors
 FT_API(void) GetLastErrorText(char** error);
 
@@ -83,9 +93,11 @@ FT_API(void) DestroyString(char* string);
 FT_API(void) DestroyStrings(char** strings, int cnt);
 FT_API(void) DestroyVector(float* vector);
 
-// Label info
+// Model info
 FT_API(int) GetMaxLabelLength(void* hPtr);
 FT_API(int) GetLabels(void* hPtr, char*** labels);
+FT_API(bool) IsModelReady(void* hPtr);
+FT_API(int) GetModelDimension(void* hPtr);
 
 // Args
 FT_API(void) GetDefaultArgs(TrainingArgs** args);

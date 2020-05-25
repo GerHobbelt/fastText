@@ -16,6 +16,25 @@ bool vector_has_nonzero_elements(const float* vector, int size);
 
 TEST_CASE("Can train, load and use supervised models", "[C API]")
 {
+    SECTION("Can get dimension on empty model")
+    {
+        auto hPtr = CreateFastText();
+
+        int dim = GetModelDimension(hPtr);
+        REQUIRE(dim == 0);
+
+        DestroyFastText(hPtr);
+    }
+
+    SECTION("Empty model is not ready")
+    {
+        auto hPtr = CreateFastText();
+
+        REQUIRE_FALSE(IsModelReady(hPtr));
+
+        DestroyFastText(hPtr);
+    }
+
     SECTION("Can handle errors")
     {
         auto hPtr = CreateFastText();
@@ -67,6 +86,9 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         GetDefaultSupervisedArgs(&args);
         Supervised(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, nullptr, nullptr);
 
+        REQUIRE(IsModelReady(hPtr));
+        REQUIRE(GetModelDimension(hPtr) == 100);
+
         DestroyArgs(args);
         DestroyFastText(hPtr);
 
@@ -82,6 +104,9 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         auto hPtr = CreateFastText();
 
         LoadModel(hPtr, "tests/models/test.bin");
+
+        REQUIRE(IsModelReady(hPtr));
+        REQUIRE(GetModelDimension(hPtr) == 100);
 
         SECTION("Can get sentence vector")
         {

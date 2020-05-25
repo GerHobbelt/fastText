@@ -68,13 +68,13 @@ FT_API(void) GetLastErrorText(char** error)
 
 FT_API(void*) CreateFastText()
 {
-    auto result = new FastText();
+    auto result = new FastTextWrapper();
     return result;
 }
 
 FT_API(int) LoadModel(void* hPtr, const char* path)
 {
-    auto fastText = static_cast<FastText*>(hPtr);
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
 
     try {
         fastText->loadModel(path);
@@ -93,7 +93,7 @@ FT_API(int) LoadModel(void* hPtr, const char* path)
 
 FT_API(int) LoadModelData(void* hPtr, const char* data, const long length)
 {
-    auto fastText = static_cast<FastText*>(hPtr);
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
 
     try {
         const auto FASTTEXT_VERSION = 12; /* Version 1b */
@@ -126,7 +126,7 @@ FT_API(int) LoadModelData(void* hPtr, const char* data, const long length)
 
 FT_API(void) DestroyFastText(void* hPtr)
 {
-    delete static_cast<FastText*>(hPtr);
+    delete static_cast<FastTextWrapper*>(hPtr);
 }
 
 //---------------------------------------------------
@@ -154,7 +154,7 @@ FT_API(void) DestroyVector(float* vector)
 
 FT_API(int) GetMaxLabelLength(void* hPtr)
 {
-    auto fastText = static_cast<FastText*>(hPtr);
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
     auto dict = fastText->getDictionary();
     int numLabels = dict->nlabels();
     int maxLen = 0;
@@ -183,7 +183,7 @@ FT_API(int) GetMaxLabelLength(void* hPtr)
 
 FT_API(int) GetLabels(void* hPtr, char*** labels)
 {
-    auto fastText = static_cast<FastText*>(hPtr);
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
     auto dict = fastText->getDictionary();
     int numLabels = dict->nlabels();
     auto localLabels = new char*[numLabels] {nullptr};
@@ -201,7 +201,20 @@ FT_API(int) GetLabels(void* hPtr, char*** labels)
     return numLabels;
 }
 
-//---------------------------------------------------
+FT_API(int) GetModelDimension(void* hPtr)
+{
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
+    if (!fastText->hasArgs())
+        return 0;
+
+    return fastText->getDimension();
+}
+
+FT_API(bool) IsModelReady(void* hPtr)
+{
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
+    return fastText->hasArgs() && fastText->hasDict() && fastText->hasModel();
+}
 
 FT_API(void) GetDefaultArgs(TrainingArgs** args)
 {
@@ -211,17 +224,14 @@ FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args)
 {
     *args = TrainingArgs::DefaultSuprevised();
 }
-//---------------------------------------------------
 
-void DestroyArgs(TrainingArgs* args)
-{
-    delete args;
-}
+
+//---------------------------------------------------
 
 FT_API(int) Supervised(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label,
         const char* pretrainedVectors)
 {
-    auto fastText = static_cast<FastText*>(hPtr);
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
     auto args = CreateArgs(trainArgs, label, pretrainedVectors);
     args.input = std::string(input);
     args.output = std::string(output);
@@ -253,7 +263,7 @@ FT_API(int) Supervised(void* hPtr, const char* input, const char* output, FastTe
 
 FT_API(int) GetNN(void* hPtr, const char* input, char*** predictedNeighbors, float* predictedProbabilities, const int n)
 {
-    auto fastText = static_cast<FastText*>(hPtr);
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
     std::vector<std::pair<real, std::string>> predictions;
 
     try {
@@ -289,7 +299,7 @@ FT_API(int) GetNN(void* hPtr, const char* input, char*** predictedNeighbors, flo
 
 FT_API(int) GetSentenceVector(void* hPtr, const char* input, float** vector)
 {
-    auto fastText = static_cast<FastText*>(hPtr);
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
     Vector svec(fastText->getDimension());
     std::istringstream inStream(input);
 
@@ -318,7 +328,7 @@ FT_API(int) GetSentenceVector(void* hPtr, const char* input, float** vector)
 
 FT_API(float) PredictSingle(void* hPtr, const char* input, char** predicted)
 {
-    auto fastText = static_cast<FastText*>(hPtr);
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
     std::vector<std::pair<real,std::string>> predictions;
     std::istringstream inStream(input);
 
@@ -352,7 +362,7 @@ FT_API(float) PredictSingle(void* hPtr, const char* input, char** predicted)
 
 FT_API(int) PredictMultiple(void* hPtr, const char* input, char*** predictedLabels, float* predictedProbabilities, int n)
 {
-    auto fastText = static_cast<FastText*>(hPtr);
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
     std::vector<std::pair<real,std::string>> predictions;
     std::istringstream inStream(input);
 
@@ -390,11 +400,14 @@ FT_API(int) PredictMultiple(void* hPtr, const char* input, char*** predictedLabe
     return cnt;
 }
 
-//---------------------------------------------------
+void DestroyArgs(TrainingArgs* args)
+{
+    delete args;
+}
 
 FT_API(void) TrainSupervised(void* hPtr, const char* input, const char* output, SupervisedArgs trainArgs, const char* labelPrefix)
 {
-    auto fastText = static_cast<FastText*>(hPtr);
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
     auto args = Args();
     args.verbose = trainArgs.Verbose;
     args.input = std::string(input);
@@ -429,7 +442,7 @@ FT_API(void) TrainSupervised(void* hPtr, const char* input, const char* output, 
 FT_API(void) Train(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label,
                    const char* pretrainedVectors)
 {
-    auto fastText = static_cast<FastText*>(hPtr);
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
     auto args = CreateArgs(trainArgs, label, pretrainedVectors);
     args.input = std::string(input);
     args.output = std::string(output);
@@ -444,6 +457,8 @@ FT_API(void) Train(void* hPtr, const char* input, const char* output, FastTextAr
 
 //---------------------------------------------------
 
+//---------------------------------------------------
+//---------------------------------------------------
 //---------------------------------------------------
 fasttext::Args CreateArgs(FastTextArgs args, const char* label, const char* pretrainedVectors)
 {
