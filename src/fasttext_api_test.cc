@@ -56,6 +56,12 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
 
     SECTION("Can train model with super old API")
     {
+        std::remove("tests/models/test.bin");
+        std::remove("tests/models/test.vec");
+
+        REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+        REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+
         auto hPtr = CreateFastText();
         SupervisedArgs args;
         args.Epochs = 10;
@@ -68,6 +74,31 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
 
         REQUIRE(result == 0);
 
+        DestroyFastText(hPtr);
+
+        REQUIRE(file_exists("tests/models/test.bin"));
+        REQUIRE(file_exists("tests/models/test.vec"));
+    }
+
+    SECTION("Can train model with old API")
+    {
+        std::remove("tests/models/test.bin");
+        std::remove("tests/models/test.vec");
+
+        REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+        REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+
+        auto hPtr = CreateFastText();
+        TrainingArgs* args;
+
+        GetDefaultSupervisedArgs(&args);
+
+        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, nullptr, nullptr);
+
+        REQUIRE(result == 0);
+        REQUIRE(IsModelReady(hPtr));
+
+        DestroyArgs(args);
         DestroyFastText(hPtr);
 
         REQUIRE(file_exists("tests/models/test.bin"));
@@ -89,6 +120,7 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         int result = Supervised(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, nullptr, nullptr);
 
         REQUIRE(result == 0);
+        REQUIRE(IsModelReady(hPtr));
 
         REQUIRE(IsModelReady(hPtr));
         REQUIRE(GetModelDimension(hPtr) == 100);
