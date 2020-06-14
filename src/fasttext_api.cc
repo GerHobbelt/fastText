@@ -237,7 +237,7 @@ FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args)
 
 //---------------------------------------------------
 
-FT_API(int) Supervised(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label,
+FT_API(int) Supervised(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label,
         const char* pretrainedVectors)
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
@@ -409,9 +409,43 @@ FT_API(int) PredictMultiple(void* hPtr, const char* input, char*** predictedLabe
     return cnt;
 }
 
-void DestroyArgs(TrainingArgs* args)
+FT_API(int) Test(void* hPtr, const char* input, int k, float threshold, TestMeter** meterPtr)
 {
-    delete args;
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
+    auto meter = new Meter(false);
+
+    std::ifstream ifs(input);
+    if (!ifs.is_open()) {
+        _lastError = "Unable to open test input file";
+        return -1;
+    }
+
+    try {
+        fastText->test(ifs, k, threshold, *meter);
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        delete meter;
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        delete meter;
+        return -1;
+    }
+
+    auto testMeter = new TestMeter(meter);
+    *meterPtr = testMeter;
+
+    return 0;
+}
+
+FT_API(int) DestroyMeter(void* hPtr)
+{
+    auto testMeter = static_cast<TestMeter*>(hPtr);
+
+    delete testMeter;
+    return 0;
 }
 
 FT_API(int) TrainSupervised(void* hPtr, const char* input, const char* output, SupervisedArgs trainArgs, const char* labelPrefix)
@@ -460,7 +494,7 @@ FT_API(int) TrainSupervised(void* hPtr, const char* input, const char* output, S
     }
 }
 
-FT_API(int) Train(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label,
+FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label,
                    const char* pretrainedVectors)
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
@@ -488,7 +522,11 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, FastTextArg
     }
 }
 
-fasttext::Args CreateArgs(FastTextArgs args, const char* label, const char* pretrainedVectors)
+void DestroyArgs(TrainingArgs* args)
+{
+    delete args;
+}
+fasttext::Args CreateArgs(TrainingArgs args, const char* label, const char* pretrainedVectors)
 {
     auto result = fasttext::Args();
 

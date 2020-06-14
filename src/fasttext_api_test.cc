@@ -226,6 +226,24 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
             DestroyVector(vector);
         }
 
+        SECTION("Can test a model")
+        {
+            TestMeter* meterPtr = nullptr;
+
+            int res = Test(hPtr, "tests/cooking/cooking.valid.txt", 1, 0.0, &meterPtr);
+
+            REQUIRE(res == 0);
+            REQUIRE(meterPtr != nullptr);
+            REQUIRE(meterPtr->nlabels == 628);
+            REQUIRE(meterPtr->nexamples == 3000);
+
+            REQUIRE(meterPtr->metrics->gold > 0);
+            REQUIRE(meterPtr->metrics->predictedGold > 0);
+            REQUIRE(meterPtr->metrics->predicted > 0);
+
+            DestroyMeter(meterPtr);
+        }
+
         DestroyFastText(hPtr);
     }
 }

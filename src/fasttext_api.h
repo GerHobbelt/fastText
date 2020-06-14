@@ -3,6 +3,7 @@
 
 #include "args.h"
 #include "fasttext.h"
+#include "meter.h"
 #include <vector>
 #include <ostream>
 
@@ -35,7 +36,7 @@ typedef struct SupervisedArgs
 #pragma pack(pop)
 
 #pragma pack(push, 1)
-typedef struct TrainingArgs
+struct TrainingArgs
 {
     // Default values copied from args.cc:21
     TrainingArgs();
@@ -68,7 +69,87 @@ typedef struct TrainingArgs
     bool qnorm;
     size_t cutoff;
     size_t dsub;
-} FastTextArgs;
+};
+#pragma pack(pop)
+
+using fasttext::Meter;
+
+#pragma pack(push, 1)
+
+struct TestMetrics
+{
+    explicit TestMetrics(int label, Meter::Metrics& metrics)
+    {
+        gold = metrics.gold;
+        predicted = metrics.predicted;
+        predictedGold = metrics.predictedGold;
+        this->label = label;
+
+        scoresLen = metrics.scoreVsTrue.size();
+        predictedScores = new float[scoresLen];
+        goldScores = new float[scoresLen];
+
+        for (int i = 0; i<scoresLen; ++i) {
+            predictedScores[i] = metrics.scoreVsTrue[i].first;
+            goldScores[i] = metrics.scoreVsTrue[i].second;
+        }
+    }
+
+    ~TestMetrics()
+    {
+        delete[] predictedScores;
+        delete[] goldScores;
+    }
+
+    uint64_t gold;
+    uint64_t predicted;
+    uint64_t predictedGold;
+    uint64_t scoresLen;
+    int label;
+    float* predictedScores;
+    float* goldScores;
+};
+
+struct TestMeter
+{
+    explicit TestMeter(Meter* meter)
+    {
+        nexamples = meter->nexamples_;
+        nlabels = meter->labelMetrics_.size();
+        sourceMeter = meter;
+        metrics = new TestMetrics(-1, meter->metrics_);
+        labelMetrics = new TestMetrics*[nlabels] {nullptr};
+
+        int cnt = -1;
+        for (auto& pair : meter->labelMetrics_)
+        {
+            labelMetrics[++cnt] = new TestMetrics(pair.first, pair.second);
+        }
+    }
+
+    ~TestMeter()
+    {
+        delete sourceMeter;
+        delete metrics;
+
+        for (int i = 0; i<nlabels; ++i)
+        {
+            if (labelMetrics[i] != nullptr)
+            {
+                delete labelMetrics[i];
+            }
+        }
+
+        delete[] labelMetrics;
+    }
+
+    uint64_t nexamples;
+    uint64_t nlabels;
+    Meter* sourceMeter;
+    TestMetrics* metrics;
+    TestMetrics** labelMetrics;
+};
+
 #pragma pack(pop)
 
 // Yeah, so we need to have this Public Morozov in here to circumvent some FastText design flaws.
@@ -107,7 +188,7 @@ FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args);
 FT_API(void) DestroyArgs(TrainingArgs* args);
 
 // FastText commands
-FT_API(int) Supervised(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label, const char* pretrainedVectors);
+FT_API(int) Supervised(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label, const char* pretrainedVectors);
 FT_API(int) GetNN(void* hPtr, const char* input, char*** predictedNeighbors, float* predictedProbabilities, int n);
 FT_API(int) GetSentenceVector(void* hPtr, const char* input, float** vector);
 
@@ -115,12 +196,16 @@ FT_API(int) GetSentenceVector(void* hPtr, const char* input, float** vector);
 FT_API(float) PredictSingle(void* hPtr, const char* input, char** predicted);
 FT_API(int) PredictMultiple(void* hPtr, const char* input, char*** predictedLabels, float* predictedProbabilities, int n);
 
+// Testing
+FT_API(int) Test(void* hPtr, const char* input, int k, float threshold, TestMeter** meterPtr);
+FT_API(int) DestroyMeter(void* hPtr);
+
 // DEPRECATED
 FT_API(int) TrainSupervised(void* hPtr, const char* input, const char* output, SupervisedArgs trainArgs, const char* labelPrefix);
-FT_API(int) Train(void* hPtr, const char* input, const char* output, FastTextArgs trainArgs, const char* label, const char* pretrainedVectors);
+FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label, const char* pretrainedVectors);
 
 // Not exported
-fasttext::Args CreateArgs(FastTextArgs args, const char* label, const char* pretrainedVectors);
+fasttext::Args CreateArgs(TrainingArgs args, const char* label, const char* pretrainedVectors);
 bool EndsWith (std::string const &fullString, std::string const &ending, bool caseInsensitive = false);
 void ToLowerInplace(std::string& string);
 
