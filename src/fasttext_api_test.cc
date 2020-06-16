@@ -11,6 +11,7 @@
 using std::cout;
 using std::string;
 
+TestMetrics* FindMetrics(TestMeter* meter, int label);
 bool file_exists(const char *filename);
 bool vector_has_nonzero_elements(const float* vector, int size);
 
@@ -237,15 +238,46 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
             REQUIRE(meterPtr->nlabels == 628);
             REQUIRE(meterPtr->nexamples == 3000);
 
-            REQUIRE(meterPtr->metrics->gold > 0);
-            REQUIRE(meterPtr->metrics->predictedGold > 0);
-            REQUIRE(meterPtr->metrics->predicted > 0);
+            REQUIRE(meterPtr->metrics->gold == meterPtr->sourceMeter->metrics_.gold);
+            REQUIRE(meterPtr->metrics->predictedGold == meterPtr->sourceMeter->metrics_.predictedGold);
+            REQUIRE(meterPtr->metrics->predicted == meterPtr->sourceMeter->metrics_.predicted);
+
+            for(auto& srcMetrics : meterPtr->sourceMeter->labelMetrics_)
+            {
+                auto metrics = FindMetrics(meterPtr, srcMetrics.first);
+
+                REQUIRE(metrics !=nullptr);
+                REQUIRE(metrics->scoresLen == srcMetrics.second.scoreVsTrue.size());
+                REQUIRE(metrics->gold == srcMetrics.second.gold);
+                REQUIRE(metrics->predicted == srcMetrics.second.predicted);
+                REQUIRE(metrics->predictedGold == srcMetrics.second.predictedGold);
+
+                if (!srcMetrics.second.scoreVsTrue.empty())
+                {
+                    //cout << "Checking loop for label " << srcMetrics.first << " with " << srcMetrics.second.scoreVsTrue.size() << " items." << std::endl;
+                    for (int i = 0; i < srcMetrics.second.scoreVsTrue.size(); ++i)
+                    {
+                        REQUIRE(metrics->goldScores[i] == srcMetrics.second.scoreVsTrue[i].second);
+                        REQUIRE(metrics->predictedScores[i] == srcMetrics.second.scoreVsTrue[i].first);
+                    }
+                }
+            }
 
             DestroyMeter(meterPtr);
         }
 
         DestroyFastText(hPtr);
     }
+}
+
+TestMetrics* FindMetrics(TestMeter* meter, int label)
+{
+    for (int i = 0; i<meter->nlabels; ++i) {
+        if (meter->labelMetrics[i]->label == label)
+            return meter->labelMetrics[i];
+    }
+
+    return nullptr;
 }
 
 bool vector_has_nonzero_elements(const float* vector, int size)

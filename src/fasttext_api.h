@@ -6,6 +6,7 @@
 #include "meter.h"
 #include <vector>
 #include <ostream>
+#include <fstream>
 
 #ifdef FASTTEXT_EXPORTS
     #ifdef WIN32
@@ -86,6 +87,15 @@ struct TestMetrics
         this->label = label;
 
         scoresLen = metrics.scoreVsTrue.size();
+
+        if (scoresLen == 0)
+        {
+            predictedScores = nullptr;
+            goldScores = nullptr;
+
+            return;
+        }
+
         predictedScores = new float[scoresLen];
         goldScores = new float[scoresLen];
 
@@ -104,7 +114,7 @@ struct TestMetrics
     uint64_t gold;
     uint64_t predicted;
     uint64_t predictedGold;
-    uint64_t scoresLen;
+    int scoresLen;
     int label;
     float* predictedScores;
     float* goldScores;
@@ -118,7 +128,14 @@ struct TestMeter
         nlabels = meter->labelMetrics_.size();
         sourceMeter = meter;
         metrics = new TestMetrics(-1, meter->metrics_);
-        labelMetrics = new TestMetrics*[nlabels] {nullptr};
+
+        if (nlabels == 0)
+        {
+            labelMetrics = nullptr;
+            return;
+        }
+
+        labelMetrics = new TestMetrics*[nlabels];
 
         int cnt = -1;
         for (auto& pair : meter->labelMetrics_)
