@@ -8,6 +8,8 @@
 #include <ostream>
 #include <fstream>
 
+using std::ofstream;
+
 #ifdef FASTTEXT_EXPORTS
     #ifdef WIN32
         #define FT_API(RetType) extern "C" __declspec(dllexport) RetType
@@ -214,7 +216,7 @@ FT_API(float) PredictSingle(void* hPtr, const char* input, char** predicted);
 FT_API(int) PredictMultiple(void* hPtr, const char* input, char*** predictedLabels, float* predictedProbabilities, int n);
 
 // Testing
-FT_API(int) Test(void* hPtr, const char* input, int k, float threshold, TestMeter** meterPtr);
+FT_API(int) Test(void* hPtr, const char* input, int k, float threshold, TestMeter** meterPtr, bool debug);
 FT_API(int) DestroyMeter(void* hPtr);
 
 // DEPRECATED
@@ -225,5 +227,6 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArg
 fasttext::Args CreateArgs(TrainingArgs args, const char* label, const char* pretrainedVectors);
 bool EndsWith (std::string const &fullString, std::string const &ending, bool caseInsensitive = false);
 void ToLowerInplace(std::string& string);
+void WriteDebugMetrics(ofstream& stream, Meter::Metrics& metrics);
 
 #endif //FASTTEXT_FASTTEXT_API_H

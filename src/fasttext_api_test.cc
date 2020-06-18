@@ -231,7 +231,7 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         {
             TestMeter* meterPtr = nullptr;
 
-            int res = Test(hPtr, "tests/cooking/cooking.valid.txt", 1, 0.0, &meterPtr);
+            int res = Test(hPtr, "tests/cooking/cooking.valid.txt", 1, 0.0, &meterPtr, false);
 
             REQUIRE(res == 0);
             REQUIRE(meterPtr != nullptr);

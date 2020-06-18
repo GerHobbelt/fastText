@@ -1,5 +1,6 @@
 #include <string>
 #include <cstring>
+#include <fstream>
 #include <sstream>
 #include <strstream>
 #include <algorithm>
@@ -8,6 +9,9 @@
 #include "fasttext_api.h"
 
 using namespace fasttext;
+using std::ofstream;
+using std::ios;
+using std::endl;
 
 TrainingArgs::TrainingArgs()
 {
@@ -409,7 +413,7 @@ FT_API(int) PredictMultiple(void* hPtr, const char* input, char*** predictedLabe
     return cnt;
 }
 
-FT_API(int) Test(void* hPtr, const char* input, int k, float threshold, TestMeter** meterPtr)
+FT_API(int) Test(void* hPtr, const char* input, int k, float threshold, TestMeter** meterPtr, bool debug)
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
     auto meter = new Meter(false);
@@ -433,6 +437,30 @@ FT_API(int) Test(void* hPtr, const char* input, int k, float threshold, TestMete
         delete meter;
         return -1;
     }
+
+    if (debug)
+    {
+        ofstream stream("_debug.txt");
+        stream << "= g" << endl << meter->nexamples_ << endl;
+
+        stream << "= -1" << endl;
+        WriteDebugMetrics(stream, meter->metrics_);
+
+        for(auto& metrics : meter->labelMetrics_)
+        {
+            stream << "= " << metrics.first << endl;
+            WriteDebugMetrics(stream, metrics.second);
+        }
+
+        auto curve = meter->precisionRecallCurve();
+        stream << "= c" << endl << curve.size() << endl;
+        for (int i = 0; i<curve.size(); ++i) {
+            stream << curve[i].first << ";" << curve[i].second << endl;
+        }
+
+        stream.close();
+    }
+
 
     auto testMeter = new TestMeter(meter);
     *meterPtr = testMeter;
@@ -590,5 +618,13 @@ bool EndsWith(const std::string& fullString, const std::string& ending, bool cas
         return substr == comparison;
     } else {
         return false;
+    }
+}
+
+void WriteDebugMetrics(ofstream& stream, Meter::Metrics& metrics)
+{
+    stream << metrics.gold << endl << metrics.predicted << endl << metrics.predictedGold << endl << metrics.scoreVsTrue.size() << endl;
+    for (int i = 0; i<metrics.scoreVsTrue.size(); ++i) {
+        stream << metrics.scoreVsTrue[i].first << ";" << metrics.scoreVsTrue[i].second << endl;
     }
 }
