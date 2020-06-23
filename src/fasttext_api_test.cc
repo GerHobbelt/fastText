@@ -43,7 +43,7 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
 
         GetDefaultSupervisedArgs(&args);
 
-        int result = Supervised(hPtr, "not/a/valid.file", "tests/models/test", *args, nullptr, nullptr);
+        int result = Train(hPtr, "not/a/valid.file", "tests/models/test", *args, nullptr, nullptr);
         REQUIRE(result == -1);
 
         char* buff;
@@ -53,57 +53,6 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         DestroyString(buff);
         DestroyArgs(args);
         DestroyFastText(hPtr);
-    }
-
-    SECTION("Can train model with super old API")
-    {
-        std::remove("tests/models/test.bin");
-        std::remove("tests/models/test.vec");
-
-        REQUIRE_FALSE(file_exists("tests/models/test.bin"));
-        REQUIRE_FALSE(file_exists("tests/models/test.vec"));
-
-        auto hPtr = CreateFastText();
-        SupervisedArgs args;
-        args.Epochs = 10;
-        args.LearningRate = 1.0;
-        args.WordNGrams = 3;
-        args.Verbose = 2;
-        args.Threads = 1;
-
-        int result = TrainSupervised(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", args, nullptr);
-
-        REQUIRE(result == 0);
-
-        DestroyFastText(hPtr);
-
-        REQUIRE(file_exists("tests/models/test.bin"));
-        REQUIRE(file_exists("tests/models/test.vec"));
-    }
-
-    SECTION("Can train model with old API")
-    {
-        std::remove("tests/models/test.bin");
-        std::remove("tests/models/test.vec");
-
-        REQUIRE_FALSE(file_exists("tests/models/test.bin"));
-        REQUIRE_FALSE(file_exists("tests/models/test.vec"));
-
-        auto hPtr = CreateFastText();
-        TrainingArgs* args;
-
-        GetDefaultSupervisedArgs(&args);
-
-        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, nullptr, nullptr);
-
-        REQUIRE(result == 0);
-        REQUIRE(IsModelReady(hPtr));
-
-        DestroyArgs(args);
-        DestroyFastText(hPtr);
-
-        REQUIRE(file_exists("tests/models/test.bin"));
-        REQUIRE(file_exists("tests/models/test.vec"));
     }
 
     SECTION("Can train model with new API")
@@ -118,7 +67,7 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         TrainingArgs* args;
 
         GetDefaultSupervisedArgs(&args);
-        int result = Supervised(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, nullptr, nullptr);
+        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, nullptr, nullptr);
 
         REQUIRE(result == 0);
         REQUIRE(IsModelReady(hPtr));
