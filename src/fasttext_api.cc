@@ -241,14 +241,13 @@ FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args)
 
 //---------------------------------------------------
 
-FT_API(int) Supervised(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label,
+FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label,
         const char* pretrainedVectors)
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
     auto args = CreateArgs(trainArgs, label, pretrainedVectors);
     args.input = std::string(input);
     args.output = std::string(output);
-    args.model = model_name::sup;
 
     if (EndsWith(args.output, ".bin")) {
         args.output = args.output.substr(0, args.output.length()-4);
@@ -474,80 +473,6 @@ FT_API(int) DestroyMeter(void* hPtr)
 
     delete testMeter;
     return 0;
-}
-
-FT_API(int) TrainSupervised(void* hPtr, const char* input, const char* output, SupervisedArgs trainArgs, const char* labelPrefix)
-{
-    auto fastText = static_cast<FastTextWrapper*>(hPtr);
-    auto args = Args();
-    args.verbose = trainArgs.Verbose;
-    args.input = std::string(input);
-    args.output = std::string(output);
-    args.model = model_name::sup;
-    args.loss = loss_name::softmax;
-    args.minCount = 1;
-    args.minn = trainArgs.MinCharNGrams;
-    args.maxn = trainArgs.MaxCharNGrams;
-    args.lr = trainArgs.LearningRate;
-    args.wordNgrams = trainArgs.WordNGrams;
-    args.epoch = trainArgs.Epochs;
-
-    if (labelPrefix != nullptr)
-    {
-        args.label = std::string(labelPrefix);
-    }
-
-    if (trainArgs.Threads > 0)
-    {
-        args.thread = trainArgs.Threads;
-    }
-
-    try {
-        auto vectorsPath = std::string(output)+".vec";
-        auto modelPath = std::string(output)+".bin";
-
-        fastText->train(args);
-        fastText->saveModel(modelPath);
-        fastText->saveVectors(vectorsPath);
-
-        return 0;
-    }
-    catch (std::exception& e) {
-        _lastError = std::string(e.what());
-        return -1;
-    }
-    catch (...) {
-        _lastError = "Unknown error";
-        return -1;
-    }
-}
-
-FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label,
-                   const char* pretrainedVectors)
-{
-    auto fastText = static_cast<FastTextWrapper*>(hPtr);
-    auto args = CreateArgs(trainArgs, label, pretrainedVectors);
-    args.input = std::string(input);
-    args.output = std::string(output);
-
-    auto vectorsPath = std::string(output)+".vec";
-    auto modelPath = std::string(output)+".bin";
-
-    try {
-        fastText->train(args);
-        fastText->saveModel(modelPath);
-        fastText->saveVectors(vectorsPath);
-
-        return 0;
-    }
-    catch (std::exception& e) {
-        _lastError = std::string(e.what());
-        return -1;
-    }
-    catch (...) {
-        _lastError = "Unknown error";
-        return -1;
-    }
 }
 
 void DestroyArgs(TrainingArgs* args)

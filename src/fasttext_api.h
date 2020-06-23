@@ -207,7 +207,7 @@ FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args);
 FT_API(void) DestroyArgs(TrainingArgs* args);
 
 // FastText commands
-FT_API(int) Supervised(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label, const char* pretrainedVectors);
+FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label, const char* pretrainedVectors);
 FT_API(int) GetNN(void* hPtr, const char* input, char*** predictedNeighbors, float* predictedProbabilities, int n);
 FT_API(int) GetSentenceVector(void* hPtr, const char* input, float** vector);
 
@@ -218,10 +218,6 @@ FT_API(int) PredictMultiple(void* hPtr, const char* input, char*** predictedLabe
 // Testing
 FT_API(int) Test(void* hPtr, const char* input, int k, float threshold, TestMeter** meterPtr, bool debug);
 FT_API(int) DestroyMeter(void* hPtr);
-
-// DEPRECATED
-FT_API(int) TrainSupervised(void* hPtr, const char* input, const char* output, SupervisedArgs trainArgs, const char* labelPrefix);
-FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label, const char* pretrainedVectors);
 
 // Not exported
 fasttext::Args CreateArgs(TrainingArgs args, const char* label, const char* pretrainedVectors);
