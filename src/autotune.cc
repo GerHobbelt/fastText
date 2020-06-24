@@ -205,7 +205,7 @@ void AutotuneStrategy::updateBest(const Args& args) {
   }
 }
 
-Autotune::Autotune(const std::shared_ptr<FastText>& fastText)
+Autotune::Autotune(FastText* fastText)
     : fastText_(fastText),
       elapsed_(0.),
       bestScore_(0.),

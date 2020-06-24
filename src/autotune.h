@@ -42,7 +42,7 @@ class AutotuneStrategy {
 
 class Autotune {
  protected:
-  std::shared_ptr<FastText> fastText_;
+  FastText* fastText_;
   double elapsed_;
   double bestScore_;
   int32_t trials_;
@@ -76,7 +76,7 @@ class Autotune {
 
  public:
   Autotune() = delete;
-  explicit Autotune(const std::shared_ptr<FastText>& fastText);
+  explicit Autotune(FastText* fastText);
   Autotune(const Autotune&) = delete;
   Autotune(Autotune&&) = delete;
   Autotune& operator=(const Autotune&) = delete;

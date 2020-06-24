@@ -374,7 +374,7 @@ void train(const std::vector<std::string> args) {
   }
   ofs.close();
   if (a.hasAutotune()) {
-    Autotune autotune(fasttext);
+    Autotune autotune(fasttext.get());
     autotune.train(a);
   } else {
     fasttext->train(a);

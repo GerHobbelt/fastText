@@ -43,7 +43,7 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
 
         GetDefaultSupervisedArgs(&args);
 
-        int result = Train(hPtr, "not/a/valid.file", "tests/models/test", *args, nullptr, nullptr);
+        int result = Train(hPtr, "not/a/valid.file", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr);
         REQUIRE(result == -1);
 
         char* buff;
@@ -67,7 +67,7 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         TrainingArgs* args;
 
         GetDefaultArgs(&args);
-        int result = Train(hPtr, "tests/cooking/cooking.train.nolabels.txt", "tests/models/test", *args, nullptr, nullptr);
+        int result = Train(hPtr, "tests/cooking/cooking.train.nolabels.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr);
 
         REQUIRE(result == 0);
         REQUIRE(IsModelReady(hPtr));
@@ -80,7 +80,7 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         REQUIRE(file_exists("tests/models/test.vec"));
     }
 
-    SECTION("Can train supervised model")
+    SECTION("Can autotune quantized supervised model")
     {
         std::remove("tests/models/test.bin");
         std::remove("tests/models/test.vec");
@@ -90,9 +90,40 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
 
         auto hPtr = CreateFastText();
         TrainingArgs* args;
+        AutotuneArgs tuneArgs;
+
+        tuneArgs.validationFile = "tests/cooking/cooking.valid.txt";
+        tuneArgs.duration = 15;
+        tuneArgs.modelSize = "10M";
 
         GetDefaultSupervisedArgs(&args);
-        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, nullptr, nullptr);
+        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, tuneArgs, nullptr, nullptr);
+
+        REQUIRE(result == 0);
+        REQUIRE(IsModelReady(hPtr));
+        REQUIRE(GetModelDimension(hPtr) == 100);
+
+        DestroyArgs(args);
+        DestroyFastText(hPtr);
+
+        REQUIRE(file_exists("tests/models/test.ftz"));
+        REQUIRE(file_exists("tests/models/test.vec"));
+    }
+
+    SECTION("Can train supervised model")
+    {
+        std::remove("tests/models/test.bin");
+        std::remove("tests/models/test.ftz");
+        std::remove("tests/models/test.vec");
+
+        REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+        REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+
+        auto hPtr = CreateFastText();
+        TrainingArgs* args;
+
+        GetDefaultSupervisedArgs(&args);
+        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr);
 
         REQUIRE(result == 0);
         REQUIRE(IsModelReady(hPtr));

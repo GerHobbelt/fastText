@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cctype>
 #include "fasttext.h"
+#include "autotune.h"
 #include "fasttext_api.h"
 
 using namespace fasttext;
@@ -241,11 +242,12 @@ FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args)
 
 //---------------------------------------------------
 
-FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label,
-        const char* pretrainedVectors)
+
+FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, AutotuneArgs autotuneArgs,
+        const char* label, const char* pretrainedVectors)
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
-    auto args = CreateArgs(trainArgs, label, pretrainedVectors);
+    auto args = CreateArgs(trainArgs, autotuneArgs, label, pretrainedVectors);
     args.input = std::string(input);
     args.output = std::string(output);
 
@@ -253,11 +255,20 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArg
         args.output = args.output.substr(0, args.output.length()-4);
     }
 
-    auto modelPath = args.output+".bin";
+    auto modelPath = args.hasAutotune() && args.getAutotuneModelSize() != Args::kUnlimitedModelSize
+            ? args.output + ".ftz"
+            : args.output + ".bin";
     auto vectorsPath = args.output+".vec";
 
     try {
-        fastText->train(args);
+        if (args.hasAutotune())
+        {
+            Autotune autotune(fastText);
+            autotune.train(args);
+        }
+        else
+            fastText->train(args);
+
         fastText->saveModel(modelPath);
         fastText->saveVectors(vectorsPath);
 
@@ -479,7 +490,7 @@ void DestroyArgs(TrainingArgs* args)
 {
     delete args;
 }
-fasttext::Args CreateArgs(TrainingArgs args, const char* label, const char* pretrainedVectors)
+fasttext::Args CreateArgs(TrainingArgs args, AutotuneArgs autotuneArgs, const char* label, const char* pretrainedVectors)
 {
     auto result = fasttext::Args();
 
@@ -520,6 +531,13 @@ fasttext::Args CreateArgs(TrainingArgs args, const char* label, const char* pret
     result.qnorm = args.qnorm;
     result.cutoff = args.cutoff;
     result.dsub = args.dsub;
+
+    // Autotune
+    result.autotuneValidationFile = autotuneArgs.validationFile == nullptr ? "" : autotuneArgs.validationFile;
+    result.autotuneDuration = autotuneArgs.duration;
+    result.autotuneMetric = autotuneArgs.metric == nullptr ? "f1" : autotuneArgs.metric;
+    result.autotuneModelSize = autotuneArgs.modelSize == nullptr ? "" : autotuneArgs.modelSize;
+    result.autotunePredictions = autotuneArgs.predictions;
 
     return result;
 }

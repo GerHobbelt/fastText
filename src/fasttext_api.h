@@ -26,19 +26,6 @@ using std::ofstream;
 #endif
 
 #pragma pack(push, 1)
-typedef struct SupervisedArgs
-{
-    int Epochs = 5;
-    double LearningRate = 0.1;
-    int WordNGrams = 1;
-    int MinCharNGrams = 0;
-    int MaxCharNGrams = 0;
-    int Verbose = 0;
-    int Threads = 0;
-} SupervisedArgs;
-#pragma pack(pop)
-
-#pragma pack(push, 1)
 struct TrainingArgs
 {
     // Default values copied from args.cc:21
@@ -72,6 +59,25 @@ struct TrainingArgs
     bool qnorm;
     size_t cutoff;
     size_t dsub;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+struct AutotuneArgs
+{
+    AutotuneArgs() :
+        validationFile{""},
+        metric{"f1"},
+        predictions{1},
+        duration{60 * 5},
+        modelSize{""}
+    {}
+
+    const char* validationFile;
+    const char* metric;
+    int predictions;
+    int duration;
+    const char* modelSize;
 };
 #pragma pack(pop)
 
@@ -207,7 +213,7 @@ FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args);
 FT_API(void) DestroyArgs(TrainingArgs* args);
 
 // FastText commands
-FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, const char* label, const char* pretrainedVectors);
+FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, AutotuneArgs autotuneArgs, const char* label, const char* pretrainedVectors);
 FT_API(int) GetNN(void* hPtr, const char* input, char*** predictedNeighbors, float* predictedProbabilities, int n);
 FT_API(int) GetSentenceVector(void* hPtr, const char* input, float** vector);
 
@@ -220,7 +226,7 @@ FT_API(int) Test(void* hPtr, const char* input, int k, float threshold, TestMete
 FT_API(int) DestroyMeter(void* hPtr);
 
 // Not exported
-fasttext::Args CreateArgs(TrainingArgs args, const char* label, const char* pretrainedVectors);
+fasttext::Args CreateArgs(TrainingArgs args, AutotuneArgs autotuneArgs, const char* label, const char* pretrainedVectors);
 bool EndsWith (std::string const &fullString, std::string const &ending, bool caseInsensitive = false);
 void ToLowerInplace(std::string& string);
 void WriteDebugMetrics(ofstream& stream, Meter::Metrics& metrics);
