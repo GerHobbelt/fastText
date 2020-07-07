@@ -351,7 +351,6 @@ FT_API(int) GetWordVector(void* hPtr, const char* input, float** vector)
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
     Vector svec(fastText->getDimension());
-    //std::istringstream inStream(input);
     std::string wordStr(input);
 
     try {
