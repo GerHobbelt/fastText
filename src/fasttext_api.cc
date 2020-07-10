@@ -9,10 +9,13 @@
 #include "autotune.h"
 #include "fasttext_api.h"
 
+#define EMPTYIFNULL(a) (a == nullptr ? "" : a)
+
 using namespace fasttext;
 using std::ofstream;
 using std::ios;
 using std::endl;
+using std::cout;
 
 TrainingArgs::TrainingArgs()
 {
@@ -244,7 +247,7 @@ FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args)
 
 
 FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, AutotuneArgs autotuneArgs,
-        const char* label, const char* pretrainedVectors)
+        const char* label, const char* pretrainedVectors, bool debug)
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
     auto args = CreateArgs(trainArgs, autotuneArgs, label, pretrainedVectors);
@@ -259,6 +262,85 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArg
             ? args.output + ".ftz"
             : args.output + ".bin";
     auto vectorsPath = args.output+".vec";
+
+    if (debug)
+    {
+        ofstream stream("_train.txt");
+        stream << "= eargs" << endl;
+
+        stream << EMPTYIFNULL(input) << endl
+            << EMPTYIFNULL(output) << endl
+            << trainArgs.lr << endl
+            << trainArgs.lrUpdateRate << endl
+            << trainArgs.dim << endl
+            << trainArgs.ws << endl
+            << trainArgs.epoch << endl
+            << trainArgs.minCount << endl
+            << trainArgs.minCountLabel << endl
+            << trainArgs.neg << endl
+            << trainArgs.wordNgrams << endl
+            << (int)trainArgs.loss << endl
+            << (int)trainArgs.model << endl
+            << trainArgs.bucket << endl
+            << trainArgs.minn << endl
+            << trainArgs.maxn << endl
+            << trainArgs.thread << endl
+            << trainArgs.t << endl
+            << EMPTYIFNULL(label) << endl
+            << trainArgs.verbose << endl
+            << EMPTYIFNULL(pretrainedVectors) << endl
+            << trainArgs.saveOutput << endl
+            << trainArgs.seed << endl
+            << trainArgs.qout << endl
+            << trainArgs.retrain << endl
+            << trainArgs.qnorm << endl
+            << trainArgs.cutoff << endl
+            << trainArgs.dsub << endl
+
+            << EMPTYIFNULL(autotuneArgs.validationFile) << endl
+            << EMPTYIFNULL(autotuneArgs.metric) << endl
+            << autotuneArgs.predictions << endl
+            << autotuneArgs.duration << endl
+            << EMPTYIFNULL(autotuneArgs.modelSize) << endl;
+
+        stream << "= args" << endl;
+
+        stream << args.input << endl
+            << args.output << endl
+            << args.lr << endl
+            << args.lrUpdateRate << endl
+            << args.dim << endl
+            << args.ws << endl
+            << args.epoch << endl
+            << args.minCount << endl
+            << args.minCountLabel << endl
+            << args.neg << endl
+            << args.wordNgrams << endl
+            << (int)args.loss << endl
+            << (int)args.model << endl
+            << args.bucket << endl
+            << args.minn << endl
+            << args.maxn << endl
+            << args.thread << endl
+            << args.t << endl
+            << args.label << endl
+            << args.verbose << endl
+            << args.pretrainedVectors << endl
+            << args.saveOutput << endl
+            << args.seed << endl
+            << args.qout << endl
+            << args.retrain << endl
+            << args.qnorm << endl
+            << args.cutoff << endl
+            << args.dsub << endl
+            << args.autotuneValidationFile << endl
+            << args.autotuneMetric << endl
+            << args.autotunePredictions << endl
+            << args.autotuneDuration << endl
+            << args.autotuneModelSize << endl;
+
+        stream.close();
+    }
 
     try {
         if (args.hasAutotune())

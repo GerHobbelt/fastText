@@ -9,6 +9,7 @@
 #include "fasttext_api.h"
 
 using std::cout;
+using std::endl;
 using std::string;
 
 TestMetrics* FindMetrics(TestMeter* meter, int label);
@@ -17,6 +18,14 @@ bool vector_has_nonzero_elements(const float* vector, int size);
 
 TEST_CASE("Can train, load and use supervised models", "[C API]")
 {
+    SECTION("Struct sizes are correct")
+    {
+        REQUIRE(sizeof(TrainingArgs) == 100);
+        REQUIRE(sizeof(AutotuneArgs) == 32);
+        REQUIRE(sizeof(TestMetrics) == 48);
+        REQUIRE(sizeof(TestMeter) == 40);
+    }
+
     SECTION("Can get dimension on empty model")
     {
         auto hPtr = CreateFastText();
@@ -43,7 +52,7 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
 
         GetDefaultSupervisedArgs(&args);
 
-        int result = Train(hPtr, "not/a/valid.file", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr);
+        int result = Train(hPtr, "not/a/valid.file", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
         REQUIRE(result == -1);
 
         char* buff;
@@ -67,7 +76,7 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         TrainingArgs* args;
 
         GetDefaultArgs(&args);
-        int result = Train(hPtr, "tests/cooking/cooking.train.nolabels.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr);
+        int result = Train(hPtr, "tests/cooking/cooking.train.nolabels.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
 
         REQUIRE(result == 0);
         REQUIRE(IsModelReady(hPtr));
@@ -84,9 +93,11 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
     {
         std::remove("tests/models/test.bin");
         std::remove("tests/models/test.vec");
+        std::remove("_train.txt");
 
         REQUIRE_FALSE(file_exists("tests/models/test.bin"));
         REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+        REQUIRE_FALSE(file_exists("_train.txt"));
 
         auto hPtr = CreateFastText();
         TrainingArgs* args;
@@ -97,7 +108,7 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         tuneArgs.modelSize = "10M";
 
         GetDefaultSupervisedArgs(&args);
-        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, tuneArgs, nullptr, nullptr);
+        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, tuneArgs, nullptr, nullptr, true);
 
         REQUIRE(result == 0);
         REQUIRE(IsModelReady(hPtr));
@@ -108,6 +119,9 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
 
         REQUIRE(file_exists("tests/models/test.ftz"));
         REQUIRE(file_exists("tests/models/test.vec"));
+        REQUIRE(file_exists("_train.txt"));
+
+        std::remove("_train.txt");
     }
 
     SECTION("Can train supervised model")
@@ -123,7 +137,7 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         TrainingArgs* args;
 
         GetDefaultSupervisedArgs(&args);
-        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr);
+        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
 
         REQUIRE(result == 0);
         REQUIRE(IsModelReady(hPtr));
