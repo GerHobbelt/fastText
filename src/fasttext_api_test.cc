@@ -104,7 +104,7 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         AutotuneArgs tuneArgs;
 
         tuneArgs.validationFile = "tests/cooking/cooking.valid.txt";
-        tuneArgs.duration = 15;
+        tuneArgs.duration = 60;
         tuneArgs.modelSize = "10M";
 
         GetDefaultSupervisedArgs(&args);
