@@ -429,6 +429,33 @@ FT_API(int) GetSentenceVector(void* hPtr, const char* input, float** vector)
     return (int) svec.size();
 }
 
+FT_API(int) GetWordVector(void* hPtr, const char* input, float** vector)
+{
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
+    Vector svec(fastText->getDimension());
+    std::string wordStr(input);
+
+    try {
+        fastText->getWordVector(svec, wordStr);
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        return -1;
+    }
+
+    auto vec = new float[svec.size()];
+    size_t sz = sizeof(float)*svec.size();
+    memcpy(vec, svec.data(), sz);
+
+    *vector = vec;
+
+    return (int) svec.size();
+}
+
 //---------------------------------------------------
 
 FT_API(float) PredictSingle(void* hPtr, const char* input, char** predicted)
