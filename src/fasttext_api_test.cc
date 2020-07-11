@@ -173,6 +173,17 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
             DestroyVector(vector);
         }
 
+        SECTION("Can get word vector")
+        {
+            float* vector;
+            int dim = GetWordVector(hPtr, "pot", &vector);
+
+            REQUIRE(dim == 100);
+            REQUIRE(vector_has_nonzero_elements(vector, dim));
+
+            DestroyVector(vector);
+        }
+
         SECTION("Can get model labels")
         {
             char** labels;
