@@ -251,17 +251,29 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArg
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
     auto args = CreateArgs(trainArgs, autotuneArgs, label, pretrainedVectors);
-    args.input = std::string(input);
-    args.output = std::string(output);
+    args.input = std::string(EMPTYIFNULL(input));
+    args.output = std::string(EMPTYIFNULL(output));
 
-    if (EndsWith(args.output, ".bin")) {
-        args.output = args.output.substr(0, args.output.length()-4);
+    if (args.input.empty())
+    {
+        _lastError = "Empty input file specified!";
+        return -1;
     }
 
-    auto modelPath = args.hasAutotune() && args.getAutotuneModelSize() != Args::kUnlimitedModelSize
-            ? args.output + ".ftz"
-            : args.output + ".bin";
-    auto vectorsPath = args.output+".vec";
+    std::string outPath(EMPTYIFNULL(output));
+    if (!outPath.empty() && (EndsWith(outPath, ".bin", true) || EndsWith(outPath, ".ftz", true))) {
+        outPath = outPath.substr(0, outPath.length()-4);
+    }
+
+    std::string modelPath;
+    std::string vectorsPath;
+
+    if (!outPath.empty()) {
+        modelPath = args.hasAutotune() && args.getAutotuneModelSize() != Args::kUnlimitedModelSize
+                         ? outPath + ".ftz"
+                         : outPath + ".bin";
+        vectorsPath = outPath + ".vec";
+    }
 
     if (debug)
     {
@@ -351,8 +363,11 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArg
         else
             fastText->train(args);
 
-        fastText->saveModel(modelPath);
-        fastText->saveVectors(vectorsPath);
+        if (!modelPath.empty())
+            fastText->saveModel(modelPath);
+
+        if (!vectorsPath.empty())
+            fastText->saveVectors(vectorsPath);
 
         return 0;
     }

@@ -168,6 +168,37 @@ TEST_CASE("Can train and quantize supervised model")
     std::remove("tests/models/test.vec");
 }
 
+TEST_CASE("Can train supervised model without saving")
+{
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.ftz");
+    std::remove("tests/models/test.vec");
+
+    REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+    REQUIRE_FALSE(file_exists("tests/models/test.ftz"));
+    REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+
+    auto hPtr = CreateFastText();
+    TrainingArgs* args;
+
+    GetDefaultSupervisedArgs(&args);
+    int result = Train(hPtr, "tests/cooking/cooking.train.txt", nullptr, *args, AutotuneArgs(), nullptr, nullptr, false);
+
+    REQUIRE(result == 0);
+    REQUIRE(IsModelReady(hPtr));
+    REQUIRE(GetModelDimension(hPtr) == 100);
+
+    REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+    REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+
+    DestroyArgs(args);
+    DestroyFastText(hPtr);
+
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.ftz");
+    std::remove("tests/models/test.vec");
+}
+
 TEST_CASE("Can load model")
 {
     std::remove("tests/models/test.bin");
