@@ -16,118 +16,200 @@ TestMetrics* FindMetrics(TestMeter* meter, int label);
 bool file_exists(const char *filename);
 bool vector_has_nonzero_elements(const float* vector, int size);
 
-TEST_CASE("Can train, load and use supervised models", "[C API]")
+TEST_CASE("Struct sizes are correct")
 {
-    SECTION("Struct sizes are correct")
-    {
-        REQUIRE(sizeof(TrainingArgs) == 100);
-        REQUIRE(sizeof(AutotuneArgs) == 32);
-        REQUIRE(sizeof(TestMetrics) == 48);
-        REQUIRE(sizeof(TestMeter) == 40);
-    }
+    REQUIRE(sizeof(TrainingArgs) == 100);
+    REQUIRE(sizeof(AutotuneArgs) == 32);
+    REQUIRE(sizeof(TestMetrics) == 48);
+    REQUIRE(sizeof(TestMeter) == 40);
+}
 
-    SECTION("Can get dimension on empty model")
-    {
-        auto hPtr = CreateFastText();
+TEST_CASE("Can get dimension on empty model")
+{
+    auto hPtr = CreateFastText();
 
-        int dim = GetModelDimension(hPtr);
-        REQUIRE(dim == 0);
+    int dim = GetModelDimension(hPtr);
+    REQUIRE(dim == 0);
 
-        DestroyFastText(hPtr);
-    }
+    DestroyFastText(hPtr);
+}
 
-    SECTION("Empty model is not ready")
-    {
-        auto hPtr = CreateFastText();
+TEST_CASE("Empty model is not ready")
+{
+    auto hPtr = CreateFastText();
 
-        REQUIRE_FALSE(IsModelReady(hPtr));
+    REQUIRE_FALSE(IsModelReady(hPtr));
 
-        DestroyFastText(hPtr);
-    }
+    DestroyFastText(hPtr);
+}
 
-    SECTION("Can handle errors")
-    {
-        auto hPtr = CreateFastText();
-        TrainingArgs* args;
+TEST_CASE("Can handle errors")
+{
+    auto hPtr = CreateFastText();
+    TrainingArgs* args;
 
-        GetDefaultSupervisedArgs(&args);
+    GetDefaultSupervisedArgs(&args);
 
-        int result = Train(hPtr, "not/a/valid.file", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
-        REQUIRE(result == -1);
+    int result = Train(hPtr, "not/a/valid.file", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
+    REQUIRE(result == -1);
 
-        char* buff;
-        GetLastErrorText(&buff);
-        REQUIRE(std::string(buff) == "not/a/valid.file cannot be opened for training!");
+    char* buff;
+    GetLastErrorText(&buff);
+    REQUIRE(std::string(buff) == "not/a/valid.file cannot be opened for training!");
 
-        DestroyString(buff);
-        DestroyArgs(args);
-        DestroyFastText(hPtr);
-    }
+    DestroyString(buff);
+    DestroyArgs(args);
+    DestroyFastText(hPtr);
+}
 
-    SECTION("Can train unsupervised model")
-    {
-        std::remove("tests/models/test.bin");
-        std::remove("tests/models/test.vec");
+TEST_CASE("Can train unsupervised model")
+{
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.vec");
 
-        REQUIRE_FALSE(file_exists("tests/models/test.bin"));
-        REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+    REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+    REQUIRE_FALSE(file_exists("tests/models/test.vec"));
 
-        auto hPtr = CreateFastText();
-        TrainingArgs* args;
+    auto hPtr = CreateFastText();
+    TrainingArgs* args;
 
-        GetDefaultArgs(&args);
-        int result = Train(hPtr, "tests/cooking/cooking.train.nolabels.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
+    GetDefaultArgs(&args);
+    int result = Train(hPtr, "tests/cooking/cooking.train.nolabels.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
 
-        REQUIRE(result == 0);
-        REQUIRE(IsModelReady(hPtr));
-        REQUIRE(GetModelDimension(hPtr) == 100);
+    REQUIRE(result == 0);
+    REQUIRE(IsModelReady(hPtr));
+    REQUIRE(GetModelDimension(hPtr) == 100);
 
-        DestroyArgs(args);
-        DestroyFastText(hPtr);
+    DestroyArgs(args);
+    DestroyFastText(hPtr);
 
-        REQUIRE(file_exists("tests/models/test.bin"));
-        REQUIRE(file_exists("tests/models/test.vec"));
-    }
+    REQUIRE(file_exists("tests/models/test.bin"));
+    REQUIRE(file_exists("tests/models/test.vec"));
 
-    SECTION("Can autotune quantized supervised model")
-    {
-        std::remove("tests/models/test.bin");
-        std::remove("tests/models/test.vec");
-        std::remove("_train.txt");
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.vec");
+}
 
-        REQUIRE_FALSE(file_exists("tests/models/test.bin"));
-        REQUIRE_FALSE(file_exists("tests/models/test.vec"));
-        REQUIRE_FALSE(file_exists("_train.txt"));
+TEST_CASE("Can autotune quantized supervised model")
+{
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.ftz");
+    std::remove("tests/models/test.vec");
+    std::remove("_train.txt");
 
-        auto hPtr = CreateFastText();
-        TrainingArgs* args;
-        AutotuneArgs tuneArgs;
+    REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+    REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+    REQUIRE_FALSE(file_exists("_train.txt"));
 
-        tuneArgs.validationFile = "tests/cooking/cooking.valid.txt";
-        tuneArgs.duration = 60;
-        tuneArgs.modelSize = "10M";
+    auto hPtr = CreateFastText();
+    TrainingArgs* args;
+    AutotuneArgs tuneArgs;
 
-        GetDefaultSupervisedArgs(&args);
-        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, tuneArgs, nullptr, nullptr, true);
+    tuneArgs.validationFile = "tests/cooking/cooking.valid.txt";
+    tuneArgs.duration = 60;
+    tuneArgs.modelSize = "10M";
 
-        REQUIRE(result == 0);
-        REQUIRE(IsModelReady(hPtr));
-        REQUIRE(GetModelDimension(hPtr) == 100);
+    GetDefaultSupervisedArgs(&args);
+    int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, tuneArgs, nullptr, nullptr, true);
 
-        DestroyArgs(args);
-        DestroyFastText(hPtr);
+    REQUIRE(result == 0);
+    REQUIRE(IsModelReady(hPtr));
+    REQUIRE(GetModelDimension(hPtr) == 100);
 
-        REQUIRE(file_exists("tests/models/test.ftz"));
-        REQUIRE(file_exists("tests/models/test.vec"));
-        REQUIRE(file_exists("_train.txt"));
+    DestroyArgs(args);
+    DestroyFastText(hPtr);
 
-        std::remove("_train.txt");
-    }
+    REQUIRE(file_exists("tests/models/test.ftz"));
+    REQUIRE(file_exists("tests/models/test.vec"));
+    REQUIRE(file_exists("_train.txt"));
 
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.ftz");
+    std::remove("tests/models/test.vec");
+    std::remove("_train.txt");
+}
+
+TEST_CASE("Can train and quantize supervised model")
+{
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.ftz");
+    std::remove("tests/models/test.vec");
+
+    REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+    REQUIRE_FALSE(file_exists("tests/models/test.ftz"));
+    REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+
+    auto hPtr = CreateFastText();
+    TrainingArgs* args;
+
+    GetDefaultSupervisedArgs(&args);
+    int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
+
+    REQUIRE(result == 0);
+    REQUIRE(IsModelReady(hPtr));
+    REQUIRE(GetModelDimension(hPtr) == 100);
+
+    REQUIRE(file_exists("tests/models/test.bin"));
+    REQUIRE(file_exists("tests/models/test.vec"));
+
+    result = Quantize(hPtr, "tests/models/test", *args, nullptr);
+
+    REQUIRE(result == 0);
+    REQUIRE(IsModelReady(hPtr));
+    REQUIRE(GetModelDimension(hPtr) == 100);
+
+    DestroyArgs(args);
+    DestroyFastText(hPtr);
+
+    REQUIRE(file_exists("tests/models/test.ftz"));
+
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.ftz");
+    std::remove("tests/models/test.vec");
+}
+
+TEST_CASE("Can load model")
+{
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.ftz");
+    std::remove("tests/models/test.vec");
+
+    REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+    REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+
+    auto hPtr = CreateFastText();
+    TrainingArgs* args;
+
+    GetDefaultSupervisedArgs(&args);
+    int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
+
+    REQUIRE(result == 0);
+    REQUIRE(IsModelReady(hPtr));
+    REQUIRE(GetModelDimension(hPtr) == 100);
+
+    REQUIRE(file_exists("tests/models/test.bin"));
+    REQUIRE(file_exists("tests/models/test.vec"));
+
+    DestroyArgs(args);
+    DestroyFastText(hPtr);
+
+    hPtr = CreateFastText();
+
+    LoadModel(hPtr, "tests/models/test.bin");
+
+    REQUIRE(IsModelReady(hPtr));
+    REQUIRE(GetModelDimension(hPtr) == 100);
+
+    DestroyFastText(hPtr);
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.vec");
+}
+
+TEST_CASE("Can perform operations on a model")
+{
     SECTION("Can train supervised model")
     {
         std::remove("tests/models/test.bin");
-        std::remove("tests/models/test.ftz");
         std::remove("tests/models/test.vec");
 
         REQUIRE_FALSE(file_exists("tests/models/test.bin"));
@@ -143,24 +225,8 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         REQUIRE(IsModelReady(hPtr));
         REQUIRE(GetModelDimension(hPtr) == 100);
 
-        DestroyArgs(args);
-        DestroyFastText(hPtr);
-
         REQUIRE(file_exists("tests/models/test.bin"));
         REQUIRE(file_exists("tests/models/test.vec"));
-    }
-
-    SECTION("Can load model")
-    {
-        REQUIRE(file_exists("tests/models/test.bin"));
-        REQUIRE(file_exists("tests/models/test.vec"));
-
-        auto hPtr = CreateFastText();
-
-        LoadModel(hPtr, "tests/models/test.bin");
-
-        REQUIRE(IsModelReady(hPtr));
-        REQUIRE(GetModelDimension(hPtr) == 100);
 
         SECTION("Can get sentence vector")
         {
@@ -295,6 +361,9 @@ TEST_CASE("Can train, load and use supervised models", "[C API]")
         }
 
         DestroyFastText(hPtr);
+
+        std::remove("tests/models/test.bin");
+        std::remove("tests/models/test.vec");
     }
 }
 

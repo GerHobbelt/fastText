@@ -366,6 +366,57 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArg
     }
 }
 
+FT_API(int) Quantize(void* hPtr, const char* output, TrainingArgs trainArgs, const char* label)
+{
+    if (!IsModelReady(hPtr))
+    {
+        _lastError = "Model is not ready!";
+        return -1;
+    }
+
+    auto fastText = static_cast<FastTextWrapper*>(hPtr);
+    if (fastText->getArgs().model != model_name::sup)
+    {
+        _lastError = "Only supervised models can be quantized!";
+        return -1;
+    }
+
+    if (output == nullptr)
+    {
+        _lastError = "Output is not specified!";
+        return -1;
+    }
+
+    auto outPath = std::string(output);
+    if (outPath.empty())
+    {
+        _lastError = "Output is not specified!";
+        return -1;
+    }
+
+    if (EndsWith(outPath, ".bin", true))
+        outPath = outPath.substr(0, outPath.length() - 4) + ".ftz";
+    else if (!EndsWith(outPath, ".ftz", true))
+        outPath = outPath + ".ftz";
+
+    auto args = CreateArgs(trainArgs, AutotuneArgs(), label, nullptr);
+
+    try {
+        fastText->quantize(args);
+        fastText->saveModel(outPath);
+
+        return 0;
+    }
+    catch (std::exception& e) {
+        _lastError = std::string(e.what());
+        return -1;
+    }
+    catch (...) {
+        _lastError = "Unknown error";
+        return -1;
+    }
+}
+
 FT_API(int) GetNN(void* hPtr, const char* input, char*** predictedNeighbors, float* predictedProbabilities, const int n)
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
