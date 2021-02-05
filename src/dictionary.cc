@@ -25,6 +25,9 @@ const std::string Dictionary::EOW = ">";
 
 Dictionary::Dictionary(std::shared_ptr<Args> args)
     : args_(args),
+      // Initialized `word2int_` as a vector with size as `MAX_VOCAB_SIZE` 
+      // and each element value as -1, this helps to map word/word's hash 
+      // to word int32 id 
       word2int_(MAX_VOCAB_SIZE, -1),
       size_(0),
       nwords_(0),
@@ -46,26 +49,65 @@ int32_t Dictionary::find(const std::string& w) const {
   return find(w, hash(w));
 }
 
+/**
+ * @brief
+ * Given a token(word) and a int, value, which could be some meaningful value 
+ * or word's certain hash-value(TODO: How to calculate hash value of this word?), 
+ * calculate the 'bucket id' of this word based on its hash value with a given 
+ * bucket size, which is also the word vocab size, defined by `word2int_`, 
+ * `word2int_` is a predefined, fix-sized vector, which size is word-vocab size, 
+ * each element's index in `word2int_` corresponds to a bucket id, the value 
+ * of the element represents if there already certain word located in certain 
+ * bucket, if not, the element of that bucket index should be -1. 
+ * 
+ * Briefly, we can understand this as a hash-bucket, push each word to different 
+ * bucket based on their hash value, the bucket id is the word id. 
+ * BUT, this is a SPECIAL HASH_BUCKET STRATEGY, different word COULD NOT BE put in 
+ * same bucket, 
+ */
 int32_t Dictionary::find(const std::string& w, uint32_t h) const {
   int32_t word2intsize = word2int_.size();
   int32_t id = h % word2intsize;
+  // If it's an exists bucket id, which means:
+  //   1. Current calculated bucket id has been occupied, 
+  // and
+  //   2. TODO: The word occupied current bucket is not same with current word
+  // Then shift current id by plus 1, and re-judgement the above 2 conditions, 
+  // until finding an empty bucket~
+  //
+  // QA: 
+  // * Why `words_[word2int_[id]]` represent current exists word's 
+  //   corresponding entry?
+  // * Since the strategy is based on "plus 1 shift" mode, maybe?
   while (word2int_[id] != -1 && words_[word2int_[id]].word != w) {
     id = (id + 1) % word2intsize;
   }
   return id;
 }
 
+/**
+ * @brief
+ * Adds new or exists word into dictionary following certain rule
+ */
 void Dictionary::add(const std::string& w) {
+  // Gets word-vocab bucket id
   int32_t h = find(w);
+  // Update token count
   ntokens_++;
+  // If it's the first time this word appearance, then:
   if (word2int_[h] == -1) {
+    // Initial a new `entry` instance saving this word's info
     entry e;
     e.word = w;
     e.count = 1;
     e.type = getType(w);
+    // Saving this word's `entry` into `words_`, which is word-vocab 
     words_.push_back(e);
+    // Assign the latest appearenced word's order to its corresponding 
+    // word-bucket's value 
     word2int_[h] = size_++;
   } else {
+    // Update current word's appearance count, i.e., word frequency 
     words_[word2int_[h]].count++;
   }
 }
@@ -210,8 +252,16 @@ bool Dictionary::readWord(std::istream& in, std::string& word) const {
   std::streambuf& sb = *in.rdbuf();
   word.clear();
   while ((c = sb.sbumpc()) != EOF) {
+    // the ' ' is using to split each tokens(words), since the input data format of 
+    // fastText is a label(), and tokens(words) tokenized from a sentence, each of them 
+    // splitted with ' '.
     if (c == ' ' || c == '\n' || c == '\r' || c == '\t' || c == '\v' ||
         c == '\f' || c == '\0') {
+      // This condition means the streambuf get sth like '${WORD}\n', so which means
+      // we get the last word, or the end of the line(sentence), so we put '${WORD}' 
+      // into `word` and initiative not change the 'pointer' of streambuf to next, 
+      // so at the next iteration calling `readWord` (means calls 'next' to 'buff-pointer'), 
+      // the 'buff-pointer' will point the '\n' with `word` as an empty string.
       if (word.empty()) {
         if (c == '\n') {
           word += EOS;
@@ -220,6 +270,11 @@ bool Dictionary::readWord(std::istream& in, std::string& word) const {
         continue;
       } else {
         if (c == '\n')
+          // `sungetc` is sort of file pointer's 'get next' function.
+          // This is handling the dirty data format, for example, if we get '${WORD}\n\n', 
+          // the first '\n' will be attached with the last word of the line(sentence) as `EOD`, 
+          // but the second '\n' is a dirtyn char so we do nothing about it and get the next 
+          // stream-buff pointer.
           sb.sungetc();
         return true;
       }
@@ -236,9 +291,11 @@ void Dictionary::readFromFile(std::istream& in) {
   int64_t minThreshold = 1;
   while (readWord(in, word)) {
     add(word);
+    // Log
     if (ntokens_ % 1000000 == 0 && args_->verbose > 1) {
       std::cerr << "\rRead " << ntokens_ / 1000000 << "M words" << std::flush;
     }
+    // If current word-vocab is 75% saturated
     if (size_ > 0.75 * MAX_VOCAB_SIZE) {
       minThreshold++;
       threshold(minThreshold, minThreshold);
@@ -258,13 +315,24 @@ void Dictionary::readFromFile(std::istream& in) {
   }
 }
 
+/**
+ * @brief
+ * This helps to dynamical located some "stop words" (and "stop labels") for 
+ * low-frequency words(low-frequency labels) and remove them (i.e. pruning word vocab).
+ * This operation will be triggered according some "monitor" variables, 
+ * if these variables satisfies certain "saturate" condition, then vocab-pruning 
+ * operation will be triggered. After vocab being pruned, these "monitor" variables 
+ * value will be reset accoding to new pruned word vocab and waiting next saturate. 
+ */
 void Dictionary::threshold(int64_t t, int64_t tl) {
+  // Sort all word's in current vocab, high-frequency words have high order
   sort(words_.begin(), words_.end(), [](const entry& e1, const entry& e2) {
     if (e1.type != e2.type) {
       return e1.type < e2.type;
     }
     return e1.count > e2.count;
   });
+  // Remove low-frequency words and low-frequency labels
   words_.erase(
       remove_if(
           words_.begin(),
@@ -274,11 +342,20 @@ void Dictionary::threshold(int64_t t, int64_t tl) {
                 (e.type == entry_type::label && e.count < tl);
           }),
       words_.end());
+  // stl vector api
   words_.shrink_to_fit();
+  // Reset some "quota" counting variables(includes `size_`, `nwords_`, 
+  // `nlabels_`, `word2int_`). These variables are reset by: 
+  // 
+  // Firstly, assign them certain initialization values, and then they 
+  // will waiting for next time's saturated which will triggering the 
+  // "pruning" operation on word vocab.
   size_ = 0;
   nwords_ = 0;
   nlabels_ = 0;
   std::fill(word2int_.begin(), word2int_.end(), -1);
+  // Secondly, iterate alone "pruned" word-vocab and update these variables 
+  // at each iteration according the same rule defined in `Dictionary::add`. 
   for (auto it = words_.begin(); it != words_.end(); ++it) {
     int32_t h = find(it->word);
     word2int_[h] = size_++;
@@ -289,6 +366,9 @@ void Dictionary::threshold(int64_t t, int64_t tl) {
       nlabels_++;
     }
   }
+  // After above steps, these variables(`size_`, `nwords_`, `nlabels_`, `word2int_`) 
+  // will continiously updated as iteration in `Dictionary::readFromFile` 
+  // until they saturated again and trigger "pruning" operation again.
 }
 
 void Dictionary::initTableDiscard() {
