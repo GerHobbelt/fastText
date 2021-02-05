@@ -298,6 +298,8 @@ void Dictionary::readFromFile(std::istream& in) {
     // If current word-vocab is 75% saturated
     if (size_ > 0.75 * MAX_VOCAB_SIZE) {
       minThreshold++;
+      // At this place, using same low-frequency threshold to judge if 
+      // word or label is "stop word" since its very low frequency
       threshold(minThreshold, minThreshold);
     }
   }
