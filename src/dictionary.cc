@@ -243,12 +243,18 @@ void Dictionary::computeSubwords(
       // but using some int id to represent char n-gram.
       // For char 1-gram case (which is char itself), we will using `char` to `int32_t` 
       // implicit conversion result as each 1-gram id and push back into `ngram`.
-      // For char n-gram (n larger than 2), we will using `Dictionary::pushHash` to 
-      // calculate a hash value as n-gram id for each n-gram and push back into `ngram`.
+      // For char n-gram (n larger than 2), we will first calculate a hash value as 
+      // n-gram id for each n-gram and push back into `ngram` with `Dictionary::pushHash` 
+      // according certain char n-gram pruning rule.
       while (j < word.size() && (word[j] & 0xC0) == 0x80) {
         ngram.push_back(word[j++]);
       }
       if (n >= args_->minn && !(n == 1 && (i == 0 || j == word.size()))) {
+        // Execute hash-bucketing on `Dictionary::hash` result of each n-gram text. 
+        // Using the mod of `Dictionary::hash` result on `args_->bucket` as 
+        // current n-gram's hash-bucket id. 
+        // Cheatsheet:
+        //   1. args_->bucket: Hash bucket number for char n-gram. 
         int32_t h = hash(ngram) % args_->bucket;
         pushHash(ngrams, h);
         // TODO: Firgure out `substring` meaning
@@ -552,6 +558,14 @@ int32_t Dictionary::getLine(
   return ntokens;
 }
 
+/**
+ * @brief
+ * Decide if put char n-gram hash bucket id into a container or just 
+ * prune this hash-bucket according some rule.
+ *
+ * @param hashes Char n-gram hash id saving container
+ * @param id Char n-gram hash id (hash bucket id), for n >= 2.
+ */
 void Dictionary::pushHash(std::vector<int32_t>& hashes, int32_t id) const {
   if (pruneidx_size_ == 0 || id < 0) {
     return;
