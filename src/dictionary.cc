@@ -228,18 +228,30 @@ void Dictionary::computeSubwords(
     std::vector<std::string>* substrings) const {
   for (size_t i = 0; i < word.size(); i++) {
     std::string ngram;
-    // TODO: Figure why this char filtering rule.
+    // TODO: Figure out why using this char filtering rule.
     if ((word[i] & 0xC0) == 0x80) {
       continue;
     }
+    // Note, here we have a "max char n-gram" notion, i.e. `args_->maxn`, which means 
+    // for each word, we will calculate char 1-gram, ... , n-gram(n == `args_->maxn`) 
+    // unless word length smaller than `args_->maxn`.
     for (size_t j = i, n = 1; j < word.size() && n <= args_->maxn; n++) {
       ngram.push_back(word[j++]);
+      // First extract char 1-gram, which means putting each char in `ngram`.
+      // 
+      // Note, we do not use char n-gram text itself to represent char n-gram feature, 
+      // but using some int id to represent char n-gram.
+      // For char 1-gram case (which is char itself), we will using `char` to `int32_t` 
+      // implicit conversion result as each 1-gram id and push back into `ngram`.
+      // For char n-gram (n larger than 2), we will using `Dictionary::pushHash` to 
+      // calculate a hash value as n-gram id for each n-gram and push back into `ngram`.
       while (j < word.size() && (word[j] & 0xC0) == 0x80) {
         ngram.push_back(word[j++]);
       }
       if (n >= args_->minn && !(n == 1 && (i == 0 || j == word.size()))) {
         int32_t h = hash(ngram) % args_->bucket;
         pushHash(ngrams, h);
+        // TODO: Firgure out `substring` meaning
         if (substrings) {
           substrings->push_back(ngram);
         }
