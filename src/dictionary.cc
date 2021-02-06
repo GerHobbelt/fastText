@@ -211,12 +211,24 @@ uint32_t Dictionary::hash(const std::string& str) const {
   return h;
 }
 
+/**
+ * @brief
+ * Extracting each word's char n-gram feature.
+ * 
+ * note: 
+ *   1. Here the word has been preprocessed, which means is has been appended 
+ *      starting and ending sign, "<" and ">".
+ *   2. A tip about cpp grammar, here the last parameter is `std::vector<std::string>*`, 
+ *      It seems we can just call this method with only 1st and 2nd parameters given, 
+ *      at that case, the compiler will infer that the last parameter is an `nullptr` or sth? 
+ */
 void Dictionary::computeSubwords(
     const std::string& word,
     std::vector<int32_t>& ngrams,
     std::vector<std::string>* substrings) const {
   for (size_t i = 0; i < word.size(); i++) {
     std::string ngram;
+    // TODO: Figure why this char filtering rule.
     if ((word[i] & 0xC0) == 0x80) {
       continue;
     }
@@ -236,10 +248,27 @@ void Dictionary::computeSubwords(
   }
 }
 
+/**
+ * @brief
+ * Before now, we have a token-vocab, with very-low frequency token dropped, 
+ * but each token is predefined as input with ' ' as sperator. Generally these 
+ * token are some words (and labels in surpervise leaning case), according the 
+ * paper "Enriching Word Vectors with Subword Information", the word's 
+ * morphologically info can be mining better with char-level n-gram feature, 
+ * and int this method, there are some simple preprocessing, and 
+ * `Dictionary::computeSubwords` helps extracting char n-gram info for each word 
+ * in vocab.
+ */
 void Dictionary::initNgrams() {
   for (size_t i = 0; i < size_; i++) {
+    // Adds starting and ending sign for each word, which are "<" and ">".
     std::string word = BOW + words_[i].word + EOW;
     words_[i].subwords.clear();
+    // From this place we can see, for each word, the char n-gram saving in 
+    // a `std::vector` using 
+    // "{1, ${1st word char-ngram}, 2, ${2nd word char-ngram}, ..., n, ${n-th word char-ngram}}" 
+    // as format, and see detail about how extracting each word's char n-gram in 
+    // `Dictionary::computeSubwords`. 
     words_[i].subwords.push_back(i);
     if (words_[i].word != EOS) {
       computeSubwords(word, words_[i].subwords);
@@ -303,6 +332,11 @@ void Dictionary::readFromFile(std::istream& in) {
       threshold(minThreshold, minThreshold);
     }
   }
+  // The threshold used in `threshold(minThreshold, minThreshold);` is 
+  // just used for dynamical control word vocab scale during continiously 
+  // add word into dictionary which can control memory and some other computional 
+  // resource using , the following finally `threshold` calling set the final 
+  // scale of the word-vocab and label vocab 
   threshold(args_->minCount, args_->minCountLabel);
   initTableDiscard();
   initNgrams();
@@ -325,6 +359,12 @@ void Dictionary::readFromFile(std::istream& in) {
  * if these variables satisfies certain "saturate" condition, then vocab-pruning 
  * operation will be triggered. After vocab being pruned, these "monitor" variables 
  * value will be reset accoding to new pruned word vocab and waiting next saturate. 
+ *
+ * So, in briefly, this method helps dynamically dropping words or labels 
+ * with very low (absolute) frequency.
+ *
+ * @param t Word vocab size limit
+ * @param tl Label vocab size limit
  */
 void Dictionary::threshold(int64_t t, int64_t tl) {
   // Sort all word's in current vocab, high-frequency words have high order
@@ -373,6 +413,18 @@ void Dictionary::threshold(int64_t t, int64_t tl) {
   // until they saturated again and trigger "pruning" operation again.
 }
 
+/**
+ * @brief
+ * This helps deciding how discarding or sampling the token according its appearance 
+ * proportion among total token appearance times, and with a function, we can 
+ * convert this idea to a score save in `pdiscard_` for each token. 
+ * NOTE: 
+ * This is only an initialize step, there will have some following updates based
+ * on current base-value
+ *
+ * Cheatsheet: `args_->t` represents "sampling threshold".
+ * TODO: Figure out sampling for what?
+ */
 void Dictionary::initTableDiscard() {
   pdiscard_.resize(size_);
   for (size_t i = 0; i < size_; i++) {
