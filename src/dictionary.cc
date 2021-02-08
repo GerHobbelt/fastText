@@ -562,6 +562,8 @@ int32_t Dictionary::getLine(
  * @brief
  * Decide if put char n-gram hash bucket id into a container or just 
  * prune this hash-bucket according some rule.
+ * 
+ * TODO: Figure why
  *
  * @param hashes Char n-gram hash id saving container
  * @param id Char n-gram hash id (hash bucket id), for n >= 2.
@@ -571,12 +573,20 @@ void Dictionary::pushHash(std::vector<int32_t>& hashes, int32_t id) const {
     return;
   }
   if (pruneidx_size_ > 0) {
+    /// `std::unordered_map` only contain unique key, so `pruneidx_.count(id)` can only 
+    /// be 1 or 0. 
+    /// QA: What's `pruneidx_` using for?
+    /// My guess is `pruneidx_` saving the info about how to pruning char n-gram hash 
+    /// bucket id, the "pruning" means merger serveral char n-gram id to an single one, 
+    /// which saved in `pruneidx_.at(id)` 
     if (pruneidx_.count(id)) {
+      /// TODO: What's `pruneidx_.at(id)` mean? 
       id = pruneidx_.at(id);
     } else {
       return;
     }
   }
+  /// TODO: Figure out what's `nwords_` meaning.
   hashes.push_back(nwords_ + id);
 }
 

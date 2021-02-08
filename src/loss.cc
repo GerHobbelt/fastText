@@ -319,6 +319,10 @@ void SoftmaxLoss::computeOutput(Model::State& state) const {
   }
 }
 
+/**
+ * @brief
+ * Calculate softmax loss value.
+ */
 real SoftmaxLoss::forward(
     const std::vector<int32_t>& targets,
     int32_t targetIndex,

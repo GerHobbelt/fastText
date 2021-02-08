@@ -29,6 +29,10 @@ bool comparePairs(
     const std::pair<real, std::string>& l,
     const std::pair<real, std::string>& r);
 
+/**
+ * @brief
+ * Create loss function according model output.
+ */
 std::shared_ptr<Loss> FastText::createLoss(std::shared_ptr<Matrix>& output) {
   loss_name lossName = args_->loss;
   switch (lossName) {
@@ -722,6 +726,14 @@ std::shared_ptr<Matrix> FastText::getInputMatrixFromFile(
   return input;
 }
 
+/**
+ * @brief
+ * Initializing embedding matrix wrights, each token (the token here includes 
+ * words, word char n-grams buckets), so the total embedding related parameters 
+ * number should be (words-num + word-char-n-grams-buckets-num) * embedding_dim. 
+ * These parameters will saving in a 2-dim `DenseMatrix` instance, with dim as 
+ * (words-num + word-char-n-grams-buckets-num) * embedding_dim. 
+ */
 std::shared_ptr<Matrix> FastText::createRandomMatrix() const {
   std::shared_ptr<DenseMatrix> input = std::make_shared<DenseMatrix>(
       dict_->nwords() + args_->bucket, args_->dim);
@@ -730,11 +742,27 @@ std::shared_ptr<Matrix> FastText::createRandomMatrix() const {
   return input;
 }
 
+/**
+ * @brief
+ * Create model output layer related parameters matrix.
+ */
 std::shared_ptr<Matrix> FastText::createTrainOutputMatrix() const {
+  /// Deciding output labels number according the training task (unsupervised 
+  /// learning for language model or supervised learning for text-labeling). 
+  /// In unsupervised learning case, the prediction target are all words, so 
+  /// the output label number should be the number of words (`dict_->nwords()`), 
+  /// note, not inlcudes char-n-gram bucket number! 
+  /// In supervised learning case, the output should be all possible text labels, 
+  /// so the label number should be `dict_->nlabels()`. 
   int64_t m =
       (args_->model == model_name::sup) ? dict_->nlabels() : dict_->nwords();
+  /// NOTE: Here the `args_->dim` is also the dim of embedding vector 
   std::shared_ptr<DenseMatrix> output =
       std::make_shared<DenseMatrix>(m, args_->dim);
+  /// Initializing all parameters as zero.
+  /// TODO: 
+  /// If initialize these parameters as zero has any bad affect for training 
+  /// performance?
   output->zero();
 
   return output;
@@ -752,16 +780,23 @@ void FastText::train(const Args& args, const TrainCallback& callback) {
     throw std::invalid_argument(
         args_->input + " cannot be opened for training!");
   }
+  /// Reading and building vocab from data file, includes building vocab of 
+  /// labels, words and words' char n-gram according several stop-word filtering, 
+  /// id pruning strategies.
   dict_->readFromFile(ifs);
   ifs.close();
 
+  /// Initializing input layer related parameters, which are, embeddings.
   if (!args_->pretrainedVectors.empty()) {
     input_ = getInputMatrixFromFile(args_->pretrainedVectors);
   } else {
     input_ = createRandomMatrix();
   }
+  /// Initializing ouput layer related parameters.
   output_ = createTrainOutputMatrix();
+  /// If using product-quantilize to compression model, default not.
   quant_ = false;
+  /// Define loss function.
   auto loss = createLoss(output_);
   bool normalizeGradient = (args_->model == model_name::sup);
   model_ = std::make_shared<Model>(input_, output_, loss, normalizeGradient);

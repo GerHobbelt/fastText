@@ -16,7 +16,15 @@
 
 namespace fasttext {
 
+/// There are two training mode: Supervised and Unsupervised.
+/// In unsupervised training, the targe is training word  
+/// embeddings with language model, there are two ways, 
+/// `cbow` for continuous bag of word, `sg` for skip-gram; 
+/// And `sup` represents supervised training in text labeling task.
 enum class model_name : int { cbow = 1, sg, sup };
+/// `hs` for Hierarchical Softmax, `ns` for Negative Sampling. 
+/// `softmax` for Softmax, `ova` for One Vs All.
+/// TODO: Figure out what is One Vs All Loss.
 enum class loss_name : int { hs = 1, ns, softmax, ova };
 enum class metric_name : int {
   f1score = 1,
