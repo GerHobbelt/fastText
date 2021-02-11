@@ -24,10 +24,14 @@ class Loss;
 
 class Model {
  protected:
+  /// `wi_` means "w input", which represents the parameters of 
+  /// the model's input layer. 
   std::shared_ptr<Matrix> wi_;
-  std::shared_ptr<Matrix> wo_;
+  /// `wo_` means "w ouput", which represents the parameters of 
+  /// the model's output layer.
+  std::shared_ptr<Matrix> wo_; 
   std::shared_ptr<Loss> loss_;
-  bool normalizeGradient_;
+  bool normalizeGradient_; // If normalize the gradients
 
  public:
   Model(
@@ -40,6 +44,12 @@ class Model {
   Model& operator=(const Model& other) = delete;
   Model& operator=(Model&& other) = delete;
 
+  /**
+   * @brief
+   * The name "State" is sort like "hiden state", but actually this is not 
+   * "hidden", `State` just holding some infomation such as gradients, 
+   * parameters, loss value, the rule of normalization gradients, etc.
+   */
   class State {
    private:
     real lossValue_;
