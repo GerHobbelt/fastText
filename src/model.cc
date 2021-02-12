@@ -127,8 +127,12 @@ void Model::predict(
     throw std::invalid_argument("k needs to be 1 or higher!");
   }
   heap.reserve(k + 1);
+  /// Compute hidden vector composed by average value of all input taken ids, 
+  /// and saving result in `state` object.
   computeHidden(input, state);
-
+  
+  /// Using the hidden vector value saved in `state` to do the inference, 
+  /// finding which label has the best chance to be the correct prediction.
   loss_->predict(k, threshold, heap, state);
 }
 

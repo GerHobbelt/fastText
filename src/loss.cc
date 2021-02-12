@@ -23,6 +23,9 @@ bool comparePairs(
   return l.first > r.first;
 }
 
+/**
+ * @brief Standart log function based on `e`.
+ */
 real std_log(real x) {
   return std::log(x + 1e-5);
 }
@@ -61,6 +64,15 @@ real Loss::sigmoid(real x) const {
   }
 }
 
+/**
+ * @brief
+ * Abstract `predict` method for base class. For multi-category problem, the 
+ * prediction process is composed with 2 steps.
+ * The first step is `computeOutput` which will compute the output of the model, 
+ * in fastText case with softmax loss, this may be the logics vector.
+ * The second step is finding which label has best chance to be the right 
+ * prediction result with `findKBest` and `std::sort_heap` process.
+ */
 void Loss::predict(
     int32_t k,
     real threshold,
@@ -71,6 +83,19 @@ void Loss::predict(
   std::sort_heap(heap.begin(), heap.end(), comparePairs);
 }
 
+/**
+ * @brief
+ * Find top k most possible prediction results(labels), the process 
+ * could be executed in multi-threading mode.
+ *
+ * @param k k for top-k most possible prediction results.
+ * @param threshold The least value that a logic's corresponding could 
+ *   be seleted as an potential prediction result.
+ * @param heap Holding the results of top-k possible labels, which is a 
+ *   struct as `std::vector< std::pair<real, int32_t> >`.
+ * @param output Holding the model output, which is the softmax function 
+ *   result of logics vector.
+ */
 void Loss::findKBest(
     int32_t k,
     real threshold,
@@ -80,11 +105,19 @@ void Loss::findKBest(
     if (output[i] < threshold) {
       continue;
     }
+    /// `heap` holds top-k possible prediction results, so k is its max 
+    /// size, unless the value of log(current_softmax) is larger than the 
+    /// least value in `heap`.
     if (heap.size() == k && std_log(output[i]) < heap.front().first) {
       continue;
     }
+    /// Push back the new potential prediction results and its correponding 
+    /// log(softmax_value).
     heap.push_back(std::make_pair(std_log(output[i]), i));
+    /// Sorting the just pushed element.
     std::push_heap(heap.begin(), heap.end(), comparePairs);
+    /// Removing extra prediction results which possibiliy is ranking 
+    /// larger than k.
     if (heap.size() > k) {
       std::pop_heap(heap.begin(), heap.end(), comparePairs);
       heap.pop_back();
@@ -302,14 +335,31 @@ void HierarchicalSoftmaxLoss::dfs(
 
 SoftmaxLoss::SoftmaxLoss(std::shared_ptr<Matrix>& wo) : Loss(wo) {}
 
+/**
+ * @brief
+ * Compute output for softmax function, saving the result in `state`.
+ */
 void SoftmaxLoss::computeOutput(Model::State& state) const {
   Vector& output = state.output;
+  /// In softmax loss case, the output equals the hidden vector (which is 
+  /// the average of all input text's token's id embedding vector, the ids  
+  /// are word id and char n-gram bucket ids) multiply with matrix (parameters) 
+  /// saved in `wo_`, this will mapping the hidden vector to an logics vector 
+  /// which has size of 1 * label_num, each element can be understood as 
+  /// an unnormalized score of each label's chance to be the right prediction.
   output.mul(*wo_, state.hidden);
+  /// Initialize max score as index zero corresponding logit in logits vector. 
   real max = output[0], z = 0.0;
-  int32_t osz = output.size();
+  int32_t osz = output.size(); /// Output vector size, which is also label number.
+  /// Iterate along elements in logics vector `output`, and get the max logic value.
   for (int32_t i = 0; i < osz; i++) {
     max = std::max(output[i], max);
   }
+  /// Here is the softmax function calculation process, which will using logics 
+  /// to calculate sofemax for each label, sometimes the formular is 
+  /// exp(i_th_logic - mean_logic) / sum_of( exp(i_th_logic - mean_logic) ), but 
+  /// in fastText case, the author didn't use "mean_logic" but "max_logic" to 
+  /// normalize each independant logic
   for (int32_t i = 0; i < osz; i++) {
     output[i] = exp(output[i] - max);
     z += output[i];
