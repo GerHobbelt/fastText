@@ -371,6 +371,18 @@ void FastText::quantize(const Args& qargs, const TrainCallback& callback) {
   model_ = std::make_shared<Model>(input_, output_, loss, normalizeGradient);
 }
 
+/**
+ * @brief Execute training in supervised mode.
+ * @param state Model's hidden state, include hidden layer outputs, embedding 
+ *   dim, etc.
+ * @param lr Learning for SGD algorithm.
+ * @param line The input sample, which is text's token ids(word id and several 
+ *   char n-gram bucket ids), each id represented as `int32_t`.
+ * @param labels Target label's index, since in fastText case, there has 
+ *   multiple labels and each sample can have not only one target label during 
+ *   training, so target label ids can be put into a `std::vector<int32_t>`, 
+ *   each element in `targets` represents one label id for current training sample.  
+ */
 void FastText::supervised(
     Model::State& state,
     real lr,
@@ -380,8 +392,23 @@ void FastText::supervised(
     return;
   }
   if (args_->loss == loss_name::ova) {
+    /// TODO: Not sure what `kAllLabelsAsTarget` meaning or using for, 
+    /// but it seems in some case, it is useless. 
+    /// 
+    /// `Model::kAllLabelsAsTarget` will be initialized as -1, and it seems 
+    /// it has been never changed during fastText program running. 
+    /// So, following line can only executed under the case of using `loss_name::ova`, 
+    /// since, for example when using softmax loss function, the `SoftmaxLoss::forward` 
+    /// called in `Model::update` does not allow the 3rd parameter smaller than zero.  
     model_->update(line, labels, Model::kAllLabelsAsTarget, lr, state);
   } else {
+    /// For each sample, its label should be represented as an one-hot or 
+    /// muti-hot encoding vector, with the target labels' correponding elements 
+    /// be 1 and all others be 0. 
+    /// NOTE: 
+    /// One point in fastText is, in some case(according chosen loss function), 
+    /// if one sample has multiple labels, we will randomly choosing one from them 
+    /// to randomly convert label vector from multi-hot vector one-hot vector.
     std::uniform_int_distribution<> uniform(0, labels.size() - 1);
     int32_t i = uniform(state.rng);
     model_->update(line, labels, i, lr, state);
@@ -768,6 +795,9 @@ std::shared_ptr<Matrix> FastText::createTrainOutputMatrix() const {
   return output;
 }
 
+/**
+ * @brief Training and output fastTExt model.
+ */
 void FastText::train(const Args& args, const TrainCallback& callback) {
   args_ = std::make_shared<Args>(args);
   dict_ = std::make_shared<Dictionary>(args_);

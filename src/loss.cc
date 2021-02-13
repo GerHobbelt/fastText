@@ -17,6 +17,19 @@ constexpr int64_t SIGMOID_TABLE_SIZE = 512;
 constexpr int64_t MAX_SIGMOID = 8;
 constexpr int64_t LOG_TABLE_SIZE = 512;
 
+/**
+ * @brief
+ * Compare each potential prediction results saving in `Predictions` 
+ * instance(which is a `std::vector< std::pair<real, int32_t> >` struct). 
+ * The comparision target is, with heap ranking algorithm we can put the 
+ * most impossible prediction result at the top of heap tree struction, so 
+ * we can remove that element(result) with `std::pop_heap`.
+ *
+ * @param l Left node in heap tree, but this is just a comparision, 
+ *   right or left is not important.
+ * @param r Right node in heap tree, but this is just a comparision, 
+ *   right or left is not important.
+ */
 bool comparePairs(
     const std::pair<real, int32_t>& l,
     const std::pair<real, int32_t>& r) {
@@ -80,6 +93,7 @@ void Loss::predict(
     Model::State& state) const {
   computeOutput(state);
   findKBest(k, threshold, heap, state.output);
+  /// Re-sorting top-k possible results saving in `std::vector` as a heap.
   std::sort_heap(heap.begin(), heap.end(), comparePairs);
 }
 
@@ -114,10 +128,19 @@ void Loss::findKBest(
     /// Push back the new potential prediction results and its correponding 
     /// log(softmax_value).
     heap.push_back(std::make_pair(std_log(output[i]), i));
-    /// Sorting the just pushed element.
+    /// Building a heap bsaed on `std::vector` instance and a element comparision 
+    /// rule, which will automaticaly relocate the last element we just pushed back 
+    /// to an appropriate locate in heap's tree structure, for chinese, can ref to 
+    /// https://www.jianshu.com/p/65fdd3099238.
     std::push_heap(heap.begin(), heap.end(), comparePairs);
     /// Removing extra prediction results which possibiliy is ranking 
-    /// larger than k.
+    /// larger than k, this can by done on heap structure by using 
+    /// `std::pop_heap` and `std::vector`'s `pop_back` method.  
+    /// `std::pop_heap` will put the most impossible element (in this case, that 
+    /// will be the first element in heap, based on compare rule in `comparePairs`) 
+    /// at the end of `std::vector` instance saving heap info, and after that, 
+    /// `pop_back` method will remove that last element, the left elements will 
+    /// still forming a heap.
     if (heap.size() > k) {
       std::pop_heap(heap.begin(), heap.end(), comparePairs);
       heap.pop_back();
@@ -370,8 +393,31 @@ void SoftmaxLoss::computeOutput(Model::State& state) const {
 }
 
 /**
- * @brief
- * Calculate softmax loss value.
+ * @brief 
+ * Calculate softmax loss value, the parameters are nearly same with the 
+ * parameter of `Model::update`.
+ * The parameter `targets` and `targetIndex` maybe hard to understand, this 
+ * confusion can be figured out by refering  to handling progress in 
+ * `FastText::supervised`.
+ *
+ * @param targets Target label's index, since in fastText case, there has 
+ *   multiple labels and each sample can have not only one target label during 
+ *   training, so target label ids can be put into a `std::vector<int32_t>`, 
+ *   each element in `targets` represents one label id for current training sample. 
+ * @param targetIndex Thought for each sample, MAYBE we have several labels, but 
+ *   during each time training, we only use one of this labels, which means, is 
+ *   we have more than one labels for current sample, we will choose one of these 
+ *   lables and assign its corrsponding element in one-hot encoding vector to 1, 
+ *   and all other lables‘ corrsponding element in one-hot encoding vector to 0. 
+ *   According `FastText::supervised`, the target labels choosing strategy is 
+ *   using uniform random choosing. 
+ * @param state The data structure using to save some hidden state info, such as 
+ *   hidden vector(which is just the hidden layer of the model, caculater by 
+ *   averaging each input token-id's embedding vector), embedding dim, etc.
+ * @param lr Learning-rate for SGD algorithm.
+ * @param backprop If execute back-propogate process to update parameters.
+ *
+ * TODO: Make sure the understanding about `targets` and `targetIndex` is not wrong. 
  */
 real SoftmaxLoss::forward(
     const std::vector<int32_t>& targets,
@@ -379,13 +425,18 @@ real SoftmaxLoss::forward(
     Model::State& state,
     real lr,
     bool backprop) {
+  /// Compute hidden states (hidden layer), saving results in `state`.
   computeOutput(state);
 
-  assert(targetIndex >= 0);
+  /// Check if `targetIndex` value illegal. The min target label id should 
+  /// larger or equal than zero, but smaller than labels number.
+  assert(targetIndex >= 0); 
   assert(targetIndex < targets.size());
+  /// TODO: What's `target` meaning?
   int32_t target = targets[targetIndex];
 
   if (backprop) {
+    /// `wo_->size()` is equal with the number of labels in current task. 
     int32_t osz = wo_->size(0);
     for (int32_t i = 0; i < osz; i++) {
       real label = (i == target) ? 1.0 : 0.0;
