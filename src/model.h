@@ -58,6 +58,12 @@ class Model {
    public:
     Vector hidden;
     Vector output;
+    /// NOTE: 
+    /// `grad` isn't for the gradient of parameters matrix mapping hidden 
+    /// layer to output layer, it's used for saving the gradients of the 
+    /// parameters matrix mapping model input to model hidden layer, by 
+    /// averaging all input tokens' embedding vectors, which is also the 
+    /// parameters matrix saving each tokens embedding vectors.
     Vector grad;
     std::minstd_rand rng;
 

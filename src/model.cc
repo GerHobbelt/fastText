@@ -114,7 +114,8 @@ void Model::computeHidden(const std::vector<int32_t>& input, State& state)
  * @param k TODO: What's this meaning?
  * @param threshold TODO: What's this meaning?
  * @param heap TODO: What's this meaning?
- * @param state This used to holding "hidden state" info, isee details in `Model::State::State`. 
+ * @param state This used to holding "hidden state" info, see details in 
+ *   `Model::State::State`. 
  */
 void Model::predict(
     const std::vector<int32_t>& input,
@@ -176,14 +177,31 @@ void Model::update(
   /// multi-threading training mode.
   Vector& grad = state.grad;
   grad.zero();
-  /// Calculate loss value for current training sample.
+  /// Calculate loss value for current training sample, updating the parameters 
+  /// matrix mapping hidden to output layer, and caching intermediate results 
+  /// during calculation of the gradients of parameters matrix mapping input to 
+  /// hidden layer (which is also the matrix saving each tokens embedding vectors).
   real lossValue = loss_->forward(targets, targetIndex, state, lr, true);
+  /// Update the incremental recording variables.
   state.incrementNExamples(lossValue);
 
+  /// TODO: Figure out the gradient-normalizing meaning.
   if (normalizeGradient_) {
     grad.mul(1.0 / input.size());
   }
   for (auto it = input.cbegin(); it != input.cend(); ++it) {
+    /// NOTE:
+    /// Following annotation will contain sth refer to the paper 
+    /// "word2vec Parameter Learning Explained".
+    ///
+    /// For now, the i-th row value saved in `grad` is equal to 
+    /// wo[i] · leaning-rate * e_i == EH_i, ref formula (12), now we multiply 
+    /// EH_i with x_k, which is 1.0 since each x_k is multi-hot encoding vector, 
+    /// with input token ids corresponding index be 1.0 and others are 0.0, all 
+    /// gradient related with these zero input will be zero, so we just pay 
+    /// attention with these x_i which value are 1.0. 
+    /// The detail of formula EH_i * x_k == EH_i * 1.0 can ref to formula (14) 
+    /// in paper. 
     wi_->addVectorToRow(grad, *it, 1.0);
   }
 }

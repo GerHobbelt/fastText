@@ -504,16 +504,38 @@ real SoftmaxLoss::forward(
       /// Adds (alpha * i-th-row-of-wo_) to `state.grad`.
       /// NOTE: 
       /// Here code-reader may have no idea about why calculate `state.grad` in this way, 
-      /// and where and how will using `state.grad`. This two points of confusing is 
-      /// reasonable, since `::forward` method only finish part of gradient calculation 
-      /// and cache intermediate result temporally in `state.grad`, the mainly job of 
-      /// `::forward` is the computation of prediction, the intermediate result calculation 
-      /// of gradient and part done of parameter-update is just done by the way for 
-      /// computataional efficency, the left process of gradient computation and 
-      /// parameter-updating will be executed in `Model::update`, there are 2 good point 
-      /// about doing this way: 
-      ///   1. higher computataional efficency. 
-      ///   2. be helpful for interface unify of different `Loss` object. 
+      /// and where and how will using `state.grad`.
+      /// 
+      /// This two points of confusing is reasonable, since `::forward` method only 
+      /// finish part of gradient calculation and cache intermediate result temporally 
+      /// in `state.grad`, and `state.grad` is used for only saving the gradient of 
+      /// parameters matrix mapping input to hidden layer.
+      /// 
+      /// The main job of `Loss::forwart` includes:
+      ///   1. Calculate but not saving hidden-to-output layer parameters matrix gradient, 
+      ///      and update hidden-to-output parameters matrix with that gradient
+      ///   2. Get loss function value, which is the log form of target-label likehood. 
+      ///   3. Cache the intermediate result in `state.grad` which will be helpful to get 
+      ///      the final result of input-to-hidden layer parameters matrix gradient, in this 
+      ///      way we can improve computational efficency
+      ///
+      /// As above discussed, there are three points we should clear: 
+      ///   1. The computation of hidden-to-output layer parameters matrix 
+      ///      gradients and the updating of hidden-to-output layer parameters have  
+      ///      been put together in `Loss::forward`.
+      ///   2. The intermediate result of the computataion of input-to-hidden layer 
+      ///      parameters matrix gradient has been put in `Loss::forward`, while the 
+      ///      rest part of this gradient computation and input-to-hidden layer 
+      ///      parameters updating have beem put in `Model::update`.
+      /// 
+      /// There are 2 advantages for this splitting design:
+      ///   1. higher computataional efficency since we can cache some useful variables 
+      ///      for future computation. 
+      ///   2. We can unify each Loss function's interface and when we need add a new 
+      ///      loss function, we can just developing a class satisfy these interface 
+      ///      requirements.
+      /// 
+      /// See detail in https://app.yinxiang.com/fx/19541afc-f298-4511-a90c-d9cd56b06e0b 
       state.grad.addRow(*wo_, i, alpha); /// `state.grad` is a `Vector` object.
       /// NOTE: 
       /// This is `Matrix::addVectorToRow`, NOT `Matrix::addRowToVector`!!!
@@ -528,7 +550,7 @@ real SoftmaxLoss::forward(
       wo_->addVectorToRow(state.hidden, i, alpha);
     }
   }
-  /// Return the log form of logits.
+  /// Return loss function value, which is the log form of target-label likehood.
   return -log(state.output[target]);
 };
 
