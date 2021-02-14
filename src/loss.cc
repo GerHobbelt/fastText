@@ -517,12 +517,14 @@ real SoftmaxLoss::forward(
       state.grad.addRow(*wo_, i, alpha); /// `state.grad` is a `Vector` object.
       /// NOTE: 
       /// This is `Matrix::addVectorToRow`, NOT `Matrix::addRowToVector`!!!
-      /// Following line will adds 
+      ///
+      /// Following line updates parameter matrix (which mapping hidden layer to 
+      /// output layer) following SGD algorithm, ref to above paper's formula (10), 
+      /// which will adds: 
       ///   alpha * state.hidden 
       ///     == leaning-rate * (e * hidden-layer) 
       ///     == leaning-rate * ( (label - state.output[i]) * hidden-layer )
-      /// to `wo_` (which is parameter matrix mapping hidden layer to output layer), 
-      /// this is following SGD algorithm, ref to above paper's formula (10).  
+      /// to `wo_` (which is parameter matrix mapping hidden layer to output layer). 
       wo_->addVectorToRow(state.hidden, i, alpha);
     }
   }
