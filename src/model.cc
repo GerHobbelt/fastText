@@ -169,7 +169,7 @@ void Model::update(
   if (input.size() == 0) {
     return;
   }
-  /// Compute hidden state (hidden layer), saving results in `state`.
+  /// Compute hidden state (hidden layer, dim info, etc), saving results in `state`.
   computeHidden(input, state); 
 
   /// Re-initializing all gradients to zero, this is critical in 

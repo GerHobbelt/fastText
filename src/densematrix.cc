@@ -119,6 +119,19 @@ real DenseMatrix::dotRow(const Vector& vec, int64_t i) const {
   return d;
 }
 
+/**
+ * @brief
+ * Similiar with `DenseMatrix::addRowToVector(Vector& x, int32_t i, real a)`, 
+ * But this time adding (vec * a) to i-th row of current `DenseMatrix` object.
+ *
+ * @param vec The given `Vector` object using to firstly multiply with an factor 
+ *   and than the result will be added to certain row of current `DenseMatrix` 
+ *   object.
+ * @param i The multiplication result of `vec` and `a` will be added to i-th row 
+ *   of current `DenseMatrix` object.
+ * @param a The multiplication factor, the `vec` will first multiply with `a`, and 
+ * then the result will be added to i-th row of current `DenseMatrix` object. 
+ */
 void DenseMatrix::addVectorToRow(const Vector& vec, int64_t i, real a) {
   assert(i >= 0);
   assert(i < m_);
@@ -137,6 +150,18 @@ void DenseMatrix::addRowToVector(Vector& x, int32_t i) const {
   }
 }
 
+/**
+ * @brief 
+ * This name `addRowToVector` is VERY CONFUSING for this using case!!!
+ * 
+ * This is not simply adding i-th row of this `DenseMatrix` object to 
+ * `Vector` object `x`, but add the result of multiply a factor `a` 
+ * with i-th row of this `DenseMatrix` object and then adds to `x`.
+ * 
+ * @param x The target `Vector` object waiting to be updated.
+ * @param i Ths i-th row of current `DenseMatrix` object to adding to.
+ * @param a Mutiply factor of i-th row of current `DenseMatrix` object. 
+ */
 void DenseMatrix::addRowToVector(Vector& x, int32_t i, real a) const {
   assert(i >= 0);
   assert(i < this->size(0));

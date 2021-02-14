@@ -51,6 +51,12 @@ void Vector::addVector(const Vector& source, real s) {
   }
 }
 
+/**
+ * @brief
+ * This will firstly multiplying `i`-th row of `A` with `a`, then 
+ * adding the result to current `Vector` object. The detail can ref 
+ * to `DenseMatrix::addRowToVector(Vector& x, int32_t i, real a)`.
+ */
 void Vector::addRow(const Matrix& A, int64_t i, real a) {
   assert(i >= 0);
   assert(i < A.size(0));
