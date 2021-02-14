@@ -108,7 +108,7 @@ void Loss::predict(
  * @param heap Holding the results of top-k possible labels, which is a 
  *   struct as `std::vector< std::pair<real, int32_t> >`.
  * @param output Holding the model output, which is the softmax function 
- *   result of logics vector.
+ *   result of logits vector.
  */
 void Loss::findKBest(
     int32_t k,
@@ -367,22 +367,22 @@ void SoftmaxLoss::computeOutput(Model::State& state) const {
   /// In softmax loss case, the output equals the hidden vector (which is 
   /// the average of all input text's token's id embedding vector, the ids  
   /// are word id and char n-gram bucket ids) multiply with matrix (parameters) 
-  /// saved in `wo_`, this will mapping the hidden vector to an logics vector 
+  /// saved in `wo_`, this will mapping the hidden vector to an logits vector 
   /// which has size of 1 * label_num, each element can be understood as 
   /// an unnormalized score of each label's chance to be the right prediction.
   output.mul(*wo_, state.hidden);
   /// Initialize max score as index zero corresponding logit in logits vector. 
   real max = output[0], z = 0.0;
   int32_t osz = output.size(); /// Output vector size, which is also label number.
-  /// Iterate along elements in logics vector `output`, and get the max logic value.
+  /// Iterate along elements in logits vector `output`, and get the max logit value.
   for (int32_t i = 0; i < osz; i++) {
     max = std::max(output[i], max);
   }
-  /// Here is the softmax function calculation process, which will using logics 
+  /// Here is the softmax function calculation process, which will using logits 
   /// to calculate sofemax for each label, sometimes the formular is 
-  /// exp(i_th_logic - mean_logic) / sum_of( exp(i_th_logic - mean_logic) ), but 
-  /// in fastText case, the author didn't use "mean_logic" but "max_logic" to 
-  /// normalize each independant logic
+  /// exp(i_th_logit - mean_logit) / sum_of( exp(i_th_logit - mean_logit) ), but 
+  /// in fastText case, the author didn't use "mean_logit" but "max_logit" to 
+  /// normalize each independant logit
   for (int32_t i = 0; i < osz; i++) {
     output[i] = exp(output[i] - max);
     z += output[i];
