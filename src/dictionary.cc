@@ -53,32 +53,53 @@ int32_t Dictionary::find(const std::string& w) const {
  * @brief
  * Given a token(word) and a int, value, which could be some meaningful value 
  * or word's certain hash-value(TODO: How to calculate hash value of this word?), 
- * calculate the 'bucket id' of this word based on its hash value with a given 
- * bucket size, which is also the word vocab size, defined by `word2int_`, 
+ * calculate the 'no-collision id' of this word based on its hash value with a 
+ * given "bucket size"(which is `word2intsize`), which is also 
+ * least-word-vocab-size (since real word vocab size could be larger than it since 
+ * the id-shift strategy to avoid id-collision), defined by `word2int_`.
  * `word2int_` is a predefined, fix-sized vector, which size is word-vocab size, 
- * each element's index in `word2int_` corresponds to a bucket id, the value 
- * of the element represents if there already certain word located in certain 
- * bucket, if not, the element of that bucket index should be -1. 
+ * each element's index in `word2int_` corresponds to certain word's id, and we can 
+ * get the detail info of that word by using this index to query the `entry` in 
+ * `Dictionary::words_`. 
+ * The value of the element represents if there already certain word located in 
+ * certain bucket, if not, the element of that bucket index should be -1. 
  * 
- * Briefly, we can understand this as a hash-bucket, push each word to different 
- * bucket based on their hash value, the bucket id is the word id. 
+ * Briefly speaking, we can understand this as a hash-bucket, push each word to 
+ * different bucket based on their hash value, the bucket id is the word id. 
  * BUT, this is a SPECIAL HASH_BUCKET STRATEGY, different word COULD NOT BE put in 
- * same bucket, 
+ * same bucket. 
+ *
+ * @param w Input word, could be a totally new word or an appeared word.
+ * @param h Just represent an parameter to generate raw word id, is this 
+ *   new generated id has collision with the id of an apeared different word, 
+ *   than continuously using a shift-strategy to generate a new id until 
+ *   getting a no-collision id or getting the conclusion that this word had
+ *   appeared and beem allocated a id.
  */
 int32_t Dictionary::find(const std::string& w, uint32_t h) const {
   int32_t word2intsize = word2int_.size();
   int32_t id = h % word2intsize;
-  // If it's an exists bucket id, which means:
-  //   1. Current calculated bucket id has been occupied, 
-  // and
-  //   2. TODO: The word occupied current bucket is not same with current word
-  // Then shift current id by plus 1, and re-judgement the above 2 conditions, 
-  // until finding an empty bucket~
-  //
-  // QA: 
-  // * Why `words_[word2int_[id]]` represent current exists word's 
-  //   corresponding entry?
-  // * Since the strategy is based on "plus 1 shift" mode, maybe?
+
+  /// If it's an exists bucket id, which means:
+  ///   1. Current calculated bucket id has been occupied. 
+  ///   2. TODO: The word occupied current bucket is not same with current word.
+  /// 
+  /// Then shift current id by plus 1, and re-judgement the above 2 conditions, 
+  /// until finding an empty bucket~
+  ///
+  /// QA: 
+  /// * Why `words_[word2int_[id]]` represent current exists word's 
+  ///   corresponding entry?
+  /// * Since the strategy is based on "plus 1 shift" mode, maybe?
+  ///
+  /// TIPS:
+  /// 1. `word2int_[id] != -1` means current calculated id has been occupied by 
+  ///    some word, this word could be same or not same with current one.
+  /// 2. `words_[word2int_[id]].word != w` means the word which occupied current 
+  ///    calcualted id is not same with the current word, which means current word 
+  ///    still has possibility be a new word, which means we should continuously 
+  ///    try to assign one no-collision id for current word until we get one or 
+  ///    make sure it is an appeared word.
   while (word2int_[id] != -1 && words_[word2int_[id]].word != w) {
     id = (id + 1) % word2intsize;
   }
@@ -90,21 +111,62 @@ int32_t Dictionary::find(const std::string& w, uint32_t h) const {
  * Adds new or exists word into dictionary following certain rule
  */
 void Dictionary::add(const std::string& w) {
-  // Gets word-vocab bucket id
+  /// Gets word id
   int32_t h = find(w);
-  // Update token count
+  /// Update the processed tokens count, include counting duplicate tokens.
   ntokens_++;
-  // If it's the first time this word appearance, then:
+  /// If it's first time this token(word or label) appearance, then doing sth.
+  /// NOTE:
+  /// Actually the condition `word2int_[h] == -1` mush happen, since in 
+  /// `Dictionary::find`, we know if the token is an new token(word or label), 
+  /// we will finally find an `id` satisfies `word2int_[id] == -1`.
   if (word2int_[h] == -1) {
-    // Initial a new `entry` instance saving this word's info
+    /// Initialize a new `entry` instance saving this new-token(word or label)'s 
+    /// info, includes sth such as this token's text, token's count, 
+    /// token(word or label) type, token's char n-gram info (this is only for 
+    /// word token, not for label token), etc.
     entry e;
+    /// Record this new word's text
     e.word = w;
+    /// Initialize this new word's count, since it's the first time this 
+    /// word's appearance, so the count should initialized as 1.
     e.count = 1;
+    /// NOTE:
+    /// In fastText, there are two kinds of tokens, word-token and label-token, 
+    /// they could be distincted by the fact that there is  "__label__" sign in 
+    /// label token. So the naming of "words" sometimes mean "tokens", which 
+    /// includes both words or labels but not only refer to words.
+    /// The following line assign current token's type.
     e.type = getType(w);
-    // Saving this word's `entry` into `words_`, which is word-vocab 
+    /// NOTE:
+    /// Following line pushs back this new-token's `entry` object into `words_`, 
+    /// the `words_` could be understoold as a token vocab which includs both 
+    /// word-tokens and label-tokens info.
+    /// After this pushing-back operation, we need to record this just-pushed-back 
+    /// token's index in `words_`, which is the current size of the `word_`, equals 
+    /// to `size_ + 1`, we will record word's token-vocab index to token-id's 
+    /// corresponding value in `word2int_`, which is `word2int_[h]`, `h` is token-id.
+    ///
+    /// Each token's info will be build and put into `Dictionary::words_` during 
+    /// the `Dictionary` building with `Dictionary::add`. This includes several steps:
+    /// 1. Judging if current token is a new one, if it's a new token, executing 
+    ///    following steps.
+    /// 2. Getting the token's id from token's raw text by `Dictionary::find`.
+    /// 3. Building current new token's `entry` object and push it back into 
+    ///    token-vocab `Dictionary::words_`.
+    /// 4. Using `Dictionary::word2int_` to record this new token's index in token 
+    ///    vocab `Dictionary::words_`. The element value in `Dictionary::word2int_` 
+    ///    which index equal to current token-id should be current token's 
+    ///    correponding index in `Dictionary::words_`
+    ///
+    /// After buiding `Dictionary`, when we needs getting a raw token's detail info 
+    /// (for example int training/inference stage), we just needs:
+    /// 1. Mapping token's raw text to token-id.
+    /// 2. Getting token-vocab-index by indexing the element with token-id from 
+    ///    `Dictionary::word2int_`.
+    /// 3. Getting token `entry` object by indexing token-vocab-index from 
+    ///    ` Dictionary::words_`.
     words_.push_back(e);
-    // Assign the latest appearenced word's order to its corresponding 
-    // word-bucket's value 
     word2int_[h] = size_++;
   } else {
     // Update current word's appearance count, i.e., word frequency 
@@ -184,6 +246,12 @@ entry_type Dictionary::getType(int32_t id) const {
   return words_[id].type;
 }
 
+/**
+ * @brief
+ * Judge if the input token is really a word or a label.
+ *
+ * @param w The input token, could be a word of a label with "__label__" sign. 
+ */
 entry_type Dictionary::getType(const std::string& w) const {
   return (w.find(args_->label) == 0) ? entry_type::label : entry_type::word;
 }
