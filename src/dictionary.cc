@@ -221,6 +221,20 @@ void Dictionary::getSubwords(
   }
 }
 
+/**
+ * @brief 
+ * Input sample's word-token and label-token's discarding rule. 
+ * If not in surpervised training mod (which means training word-vector with 
+ * language model), word-tokens will be randomly dropped if an generated 
+ * random number is larget than `rand`.
+ * Note this dropping will execute on word-token unit, not on char n-gram! 
+ *
+ * @param id One input token-vocab-index, the notion of `token-vocab-index` 
+ *   ref to annotations in `Dictionary::words_`.
+ * @param rand This is threshold control a random word dropping strategy 
+ *   which can increase model's robustness by introduce randomness during 
+ *   self-surpervised training mode. 
+ */
 bool Dictionary::discard(int32_t id, real rand) const {
   assert(id >= 0);
   assert(id < nwords_);
@@ -578,11 +592,25 @@ void Dictionary::reset(std::istream& in) const {
 /**
  * @brief 
  * Getting one sample from input stream, and convert the text line into 
- * token ids, which includes word id and char n-gram ids, these `int32_t` 
- * ids will be put into `words`.
+ * token-vocab-indexs, with which we can get this sample's tokens (maybe 
+ * word-token or label-token) from token-vocab `Dictionary::words_` by 
+ * indexing the element in it with token-vocab-indexs. Than executing 
+ * some token-dropping strategy and push the left token's token-vocab-index 
+ * into `words` and return incremental updated processed tokens number.
+ *
+ * Here is the detail process: 
+ * 1. `Dictionary::find` will map token's raw text to token-id.
+ * 2. Getting token-vocab-index by indexing the element which index equal 
+ *    with token-id from `Dictionary::word2int_`. 
+ * 3. Getting token entry object by indexing token-vocab-index from 
+ *    `Dictionary::words_`.
+ *
+ * If still not understand, could refer more details in `Dictionary::add` 
+ * annotation.
+ *
  * NOTE: 
- * Here the program do not handling labels, the labels will be handeled in 
- * reload version of `Dictionary::getLine`. 
+ * Here the program do not handling labels, the labels will be handeled 
+ * in reload version of `Dictionary::getLine`. 
  */
 int32_t Dictionary::getLine(
     std::istream& in,
@@ -595,16 +623,26 @@ int32_t Dictionary::getLine(
   reset(in);
   words.clear();
   while (readWord(in, token)) {
+    /// Above process 1, `h` is token-id
     int32_t h = find(token);
+    /// Above process 2, `wid` is token-vocab-index, which is token's 
+    /// corrponding index in token-vocab `Dictionary::words_`.
     int32_t wid = word2int_[h];
     if (wid < 0) {
       continue;
     }
 
+    /// Incremental counting the processed tokens (not matter duplicated or not) 
+    /// during training process.
     ntokens++;
+
+    /// Check if current token-vocab-index illegal and if current token hitting 
+    /// discarding condition or random discarding strategy. If not, push current 
+    /// token's token-vocab-index into result holder `words`. 
     if (getType(wid) == entry_type::word && !discard(wid, uniform(rng))) {
       words.push_back(wid);
     }
+    /// Cutting of for some extremet long input token sequences.
     if (ntokens > MAX_LINE_SIZE || token == EOS) {
       break;
     }
