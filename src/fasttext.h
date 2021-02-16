@@ -42,7 +42,10 @@ class FastText {
   std::shared_ptr<Matrix> input_;
   std::shared_ptr<Matrix> output_;
   std::shared_ptr<Model> model_;
-  std::atomic<int64_t> tokenCount_{};
+  /// `tokenCount_` counts up to now how many tokens (without duplicates 
+  /// elimination) have been pass to training progress, used for calculate 
+  /// training progress rate.
+  std::atomic<int64_t> tokenCount_{}; 
   std::atomic<real> loss_{};
   std::chrono::steady_clock::time_point start_;
   bool quant_;

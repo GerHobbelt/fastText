@@ -275,8 +275,15 @@ void FastText::loadModel(std::istream& in) {
   buildModel();
 }
 
+/**
+ * @brief 
+ * Adjusts some training variables such as learning-rate and some statistical 
+ * monitor variables or time recorder, based on current training progress rate.
+ */
 std::tuple<int64_t, double, double> FastText::progressInfo(real progress) {
   double t = utils::getDuration(start_, std::chrono::steady_clock::now());
+  /// NOTE: 
+  /// Decay learning rate according training progress rate, linearly at this place.
   double lr = args_->lr * (1.0 - progress);
   double wst = 0;
 
@@ -656,32 +663,83 @@ std::vector<std::pair<real, std::string>> FastText::getAnalogies(
   return getNN(*wordVectors_, query, k, {wordA, wordB, wordC});
 }
 
+/**
+ * @brief If it's ok to continue training or not.
+ * TODO: Not sure the meaning of `tokenCount_ < args_->epoch * ntokens`
+ */
 bool FastText::keepTraining(const int64_t ntokens) const {
   return tokenCount_ < args_->epoch * ntokens && !trainException_;
 }
 
+/**
+ * @brief Single training thread.
+ * @param threadId Thread id.
+ * @param callback Thread result callback function. `TrainCallback` is define 
+ *   as `std::function<void(float, float, double, double, int64_t)>`.
+ *
+ * NOTE:
+ * It seems here the `callback` function is not that similiar with the 
+ * callback notion in asynchronous programming. 
+ */
 void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
   std::ifstream ifs(args_->input);
+  /// The following line venly distributed the input `std::ifstream` to 
+  /// `args_->thread` numbers of stream 'shards', bass on this data-parallel 
+  /// mode, fastText can execute training process in multiple thread. 
+  /// Suppose among input stream, there are n chars, and we have k threads, 
+  /// so each thread is responsible for training the model with `n / k` chars 
+  /// as training data size. For m-th thread, it will using the training data 
+  /// ranging from `(m - 1) * (n / k)` to `m * (n / k)` chars.
   utils::seek(ifs, threadId * utils::size(ifs) / args_->thread);
 
   Model::State state(args_->dim, output_->size(0), threadId + args_->seed);
 
   const int64_t ntokens = dict_->ntokens();
   int64_t localTokenCount = 0;
+  /// `line` is input text token ids, includes word id and several char n-gram ids.
+  /// `labels` contains label ids, fastText supports more than one label.
   std::vector<int32_t> line, labels;
   uint64_t callbackCounter = 0;
   try {
     while (keepTraining(ntokens)) {
+      /// NOTE:
+      /// Here are some explanations about following line's variables.
+      /// 1. `progress` represent current training progress rate, in detail, 
+      /// 2. `ntokens`, or `dict_->ntokens()`, is the total token numbers among 
+      ///     the full input stream `ifs` without duplicate elimination, the 
+      ///     value of `dict_->ntokens()` could be get during the `Dictionary` 
+      ///     object scaning all training data to build the dictionary.
+      /// 3. `args_->epoch * ntokens` represents how many token will passed to 
+      ///    fastText program during the several epochs' training, 
+      ///    `args_->epoch` is epoch number, and `ntokens` equals to token number 
+      ///    passed to program in one epoch training.
+      /// 4. `tokenCount_`, how many tokens appeared in finished training data, 
+      ///      details ref to annotation in fasttext.h.
+      ///  
+      /// So, `progress` represents training progress rate up to now. 
       real progress = real(tokenCount_) / (args_->epoch * ntokens);
+      /// The following loops shows:
+      ///   1. `callbackCounter` is used to control adjustment frequency for 
+      ///      sth such as learning-rate with `progressInfo`.
+      ///   2. `callbackCounter` also control the frequency to execute `callback`
+      ///      function. 
       if (callback && ((callbackCounter++ % 64) == 0)) {
         double wst;
         double lr;
         int64_t eta;
         std::tie<double, double, int64_t>(wst, lr, eta) =
             progressInfo(progress);
+        /// NOTE:
+        /// Here the `callback` may looks like a function, but it is not, it's 
+        /// just the parameter names `callback`. The following code line 
+        /// executes `callback` (which is a 
+        /// `std::function<void(float, float, double, double, int64_t)>` function).
         callback(progress, loss_, wst, lr, eta);
       }
+      /// Update lr for the last batch of training data, which may have less than 
+      /// 64 samples.
       real lr = args_->lr * (1.0 - progress);
+      /// Decide which training mode to execute.
       if (args_->model == model_name::sup) {
         localTokenCount += dict_->getLine(ifs, line, labels);
         supervised(state, lr, line, labels);
@@ -796,7 +854,9 @@ std::shared_ptr<Matrix> FastText::createTrainOutputMatrix() const {
 }
 
 /**
- * @brief Training and output fastTExt model.
+ * @brief 
+ * Training and output fastTExt model. The training will be executed in 
+ * multi-threading mode.
  */
 void FastText::train(const Args& args, const TrainCallback& callback) {
   args_ = std::make_shared<Args>(args);
@@ -841,12 +901,16 @@ void FastText::abort() {
   }
 }
 
+/**
+ * @brief Start one trining thread.
+ */
 void FastText::startThreads(const TrainCallback& callback) {
   start_ = std::chrono::steady_clock::now();
   tokenCount_ = 0;
   loss_ = -1;
   trainException_ = nullptr;
   std::vector<std::thread> threads;
+  /// If multi-thread training mode.
   if (args_->thread > 1) {
     for (int32_t i = 0; i < args_->thread; i++) {
       threads.push_back(std::thread([=]() { trainThread(i, callback); }));

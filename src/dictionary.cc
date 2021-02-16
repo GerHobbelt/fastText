@@ -294,6 +294,14 @@ void Dictionary::initNgrams() {
   }
 }
 
+/**
+ * @brief 
+ * Reading a single token from input stream, the input stream using " " to split
+ * each single token.
+ * NOTE:
+ * Although the method's name is `readWord`, but actually not every token is word, 
+ * it could also be a label.
+ */
 bool Dictionary::readWord(std::istream& in, std::string& word) const {
   int c;
   std::streambuf& sb = *in.rdbuf();
@@ -499,6 +507,15 @@ void Dictionary::reset(std::istream& in) const {
   }
 }
 
+/**
+ * @brief 
+ * Getting one sample from input stream, and convert the text line into 
+ * token ids, which includes word id and char n-gram ids, these `int32_t` 
+ * ids will be put into `words`.
+ * NOTE: 
+ * Here the program do not handling labels, the labels will be handeled in 
+ * reload version of `Dictionary::getLine`. 
+ */
 int32_t Dictionary::getLine(
     std::istream& in,
     std::vector<int32_t>& words,

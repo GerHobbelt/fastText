@@ -15,11 +15,23 @@ namespace fasttext {
 
 namespace utils {
 
+/**
+ * @brief 
+ * This helps get the length of input stream. In detail, the 
+ * `ifs.seekg(std::streamoff(0), std::ios::end)` locates the pointer of the 
+ * input stream to the end of the stream (with bias 0 unit, which is just same 
+ * with the stream end), and than using `tellg` gets the bias of the current 
+ * stream point location to the start of the stream, which is the length of 
+ * stream.
+ */
 int64_t size(std::ifstream& ifs) {
   ifs.seekg(std::streamoff(0), std::ios::end);
   return ifs.tellg();
 }
 
+/**
+ * @brief Locate the pointer of the stream to certain position controlled by `pos`. 
+ */
 void seek(std::ifstream& ifs, int64_t pos) {
   ifs.clear();
   ifs.seekg(std::streampos(pos));
