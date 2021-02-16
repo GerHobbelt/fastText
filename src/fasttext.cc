@@ -741,7 +741,10 @@ void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
       real lr = args_->lr * (1.0 - progress);
       /// Decide which training mode to execute.
       if (args_->model == model_name::sup) {
+        /// Handling one input line text, incremental update current thread 
+        /// accumulated handled word-token and label token count to `localTokenCount`.
         localTokenCount += dict_->getLine(ifs, line, labels);
+        /// Starts current thread's supervised training task. 
         supervised(state, lr, line, labels);
       } else if (args_->model == model_name::cbow) {
         localTokenCount += dict_->getLine(ifs, line, state.rng);
@@ -761,6 +764,7 @@ void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
   } catch (DenseMatrix::EncounteredNaNError&) {
     trainException_ = std::current_exception();
   }
+  /// The No.0 thread is responsible for record current loss value.
   if (threadId == 0)
     loss_ = state.getLoss();
   ifs.close();
@@ -902,33 +906,56 @@ void FastText::abort() {
 }
 
 /**
- * @brief Start one trining thread.
+ * @brief Starts one training thread.
  */
 void FastText::startThreads(const TrainCallback& callback) {
-  start_ = std::chrono::steady_clock::now();
+  start_ = std::chrono::steady_clock::now(); /// Starts time.
   tokenCount_ = 0;
   loss_ = -1;
   trainException_ = nullptr;
   std::vector<std::thread> threads;
-  /// If multi-thread training mode.
+  /// If using multi-thread training mode. 
+  /// NOTE:
+  /// The training threads will run in backend, which mean the main program 
+  /// will not be blocked and the main program will just go to the while loop 
+  /// `while (keepTraining(ntokens))` to continuously print the training log.
   if (args_->thread > 1) {
     for (int32_t i = 0; i < args_->thread; i++) {
+      /// Iteratively define each thread's training task.
       threads.push_back(std::thread([=]() { trainThread(i, callback); }));
     }
+  /// Using single-thread training mode.
   } else {
     // webassembly can't instantiate `std::thread`
     trainThread(0, callback);
   }
+  /// Gets total word-token and label token number among full training data, 
+  /// this counting includes deuplicates. `dict_->ntokens()` will be calculated 
+  /// during `dict_` building. 
   const int64_t ntokens = dict_->ntokens();
   // Same condition as trainThread
   while (keepTraining(ntokens)) {
+    /// TODO: Why `sleep_for`? 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    /// Printting log. `real(tokenCount_)` represents for now how many tokens 
+    /// has been processed by all training threads, `ntokens` represents 
+    /// how many tokens (include duplicates) in training data, 
+    /// so `args_->epoch * ntokens` represents how many tokens program needs 
+    /// process all training epoch on training data, and so, 
+    /// `real(tokenCount_) / (args_->epoch * ntokens)` represents currrent 
+    /// training progress rate. 
     if (loss_ >= 0 && args_->verbose > 1) {
+      ///
       real progress = real(tokenCount_) / (args_->epoch * ntokens);
       std::cerr << "\r";
       printInfo(progress, loss_, std::cerr);
     }
   }
+
+  /// The `join` method make sure even if the above while-loop will be exited 
+  /// for some reason while the training threads still not finished, the main 
+  /// process will not continuously execute to end which will force unfinished 
+  /// training threads exit.
   for (int32_t i = 0; i < threads.size(); i++) {
     threads[i].join();
   }

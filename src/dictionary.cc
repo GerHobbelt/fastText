@@ -610,7 +610,12 @@ void Dictionary::reset(std::istream& in) const {
  *
  * NOTE: 
  * Here the program do not handling labels, the labels will be handeled 
- * in reload version of `Dictionary::getLine`. 
+ * in reload version of `Dictionary::getLine`.
+ *
+ * @param in Input stream
+ * @param words Part of outputs' holder, holding extract and kept tokens' 
+ *   token-vocab-index.
+ * @param rng Random dropping hitting threshold used by `Dictionary::discard`.
  */
 int32_t Dictionary::getLine(
     std::istream& in,

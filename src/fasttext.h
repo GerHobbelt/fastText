@@ -45,6 +45,13 @@ class FastText {
   /// `tokenCount_` counts up to now how many tokens (without duplicates 
   /// elimination) have been pass to training progress, used for calculate 
   /// training progress rate.
+  /// NOTE: 
+  /// The reason why define `tokenCount_` as an `std::atomic<int64_t>` variable 
+  /// is, during the multi-thread training mode with SGD as optimizing algorithm, 
+  /// after each thread has processed one sample, that thread will updating the 
+  /// current `tokenCount_` to `tokenCount_ + 1` since one sample has just been 
+  /// processed, so we needs guarantee the thread-safety of `tokenCount_` as a  
+  /// counter that each thread can read and write.
   std::atomic<int64_t> tokenCount_{}; 
   std::atomic<real> loss_{};
   std::chrono::steady_clock::time_point start_;
