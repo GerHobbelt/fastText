@@ -98,12 +98,27 @@ real Loss::sigmoid(real x) const {
 
 /**
  * @brief
- * Abstract `predict` method for base class. For multi-category problem, the 
- * prediction process is composed with 2 steps.
- * The first step is `computeOutput` which will compute the output of the model, 
- * in fastText case with softmax loss, this may be the logics vector.
- * The second step is finding which label has best chance to be the right 
- * prediction result with `findKBest` and `std::sort_heap` process.
+ * For multi-category problem, the prediction process is composed with 2 steps:
+ * 1. Execute `computeOutput` which will compute the output of the model, 
+ *    in fastText case with softmax loss, this may be the logics vector.
+ * 2. Finding which label(categores) has best chance to be the right prediction 
+ *    result with `findKBest` and `std::sort_heap` process.
+ *    2.1. `findKBest` will given top `k` possible categories which 
+ *         model-inference-score is higher than `threshold`, So it's possible that 
+ *         it returns less than `k` results since all other categories' 
+ *         model-inference-score is less than `threshold`.
+ *    2.2. The top-k candidates retured by `findKBest` are not sorted, and 
+ *         `std::sort_heap` will sort them with heap algorithm.
+ *
+ * Can also refer to the annotation of `FastText::predict` and `Model::predict`. 
+ *
+ * @param k Top k most possible prediction categories.
+ * @param threshold The least prediction score threshould, only the categories 
+ *   which model-inference-score is higher than `threshold` will consider as the 
+ *   candidate prediction results.
+ * @param heap The heap data-structure which will be useful to sort prediction 
+ *   prediction results according their scores with heap-algorithms and removing 
+ *   relative-low score prediction canditates
  */
 void Loss::predict(
     int32_t k,

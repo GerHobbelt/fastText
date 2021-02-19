@@ -111,9 +111,13 @@ void Model::computeHidden(const std::vector<int32_t>& input, State& state)
  *   instance, each element is a token, which is one of text's word and 
  *   char n-gram bucket id, these ids will be used to query each token's 
  *   embedding vector in embedding vector dict(matrix).
- * @param k TODO: What's this meaning?
- * @param threshold TODO: What's this meaning?
- * @param heap TODO: What's this meaning?
+ * @param k Top k most possible prediction categories.
+ * @param threshold The least prediction score threshould, only the categories 
+ *   which model-inference-score is higher than `threshold` will consider as the 
+ *   candidate prediction results.
+ * @param heap The heap data-structure which will be useful to sort prediction 
+ *   prediction results according their scores with heap-algorithms and removing 
+ *   relative-low score prediction canditates.
  * @param state This used to holding "hidden state" info, see details in 
  *   `Model::State::State`. 
  */

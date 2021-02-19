@@ -488,6 +488,20 @@ void FastText::test(std::istream& in, int32_t k, real threshold, Meter& meter)
   }
 }
 
+/**
+ * @brief 
+ * Model prediction. This can only called on model trained under uspervised mode.
+ * In detail, we will choose top `k` categories which model-inference-score is 
+ * higher than `threshold`. So it's possible that model return less than `k` results 
+ * since all other categories' model-inference-score is less than `threshold`.
+ *
+ * @param k Top k most possible prediction categories.
+ * @param words The word token id of input text.
+ * @param predictions Prediction result holder.
+ * @param threshold The least prediction score threshould, only the categories 
+ *   which model-inference-score is higher than `threshold` will consider as the 
+ *   candidate prediction results.
+ */
 void FastText::predict(
     int32_t k,
     const std::vector<int32_t>& words,
@@ -893,7 +907,9 @@ void FastText::train(const Args& args, const TrainCallback& callback) {
   /// Define loss function.
   auto loss = createLoss(output_);
   bool normalizeGradient = (args_->model == model_name::sup);
+  /// Initialize model
   model_ = std::make_shared<Model>(input_, output_, loss, normalizeGradient);
+  /// Start (multi-threads) training
   startThreads(callback);
 }
 
