@@ -397,6 +397,7 @@ SoftmaxLoss::SoftmaxLoss(std::shared_ptr<Matrix>& wo) : Loss(wo) {}
  * Compute output for softmax function, saving the result in `state`.
  */
 void SoftmaxLoss::computeOutput(Model::State& state) const {
+  /// Each element in `state.output` corresponding one labels' prediction score. 
   Vector& output = state.output;
   /// In softmax loss case, the output equals the hidden vector (which is 
   /// the average of all input text's token's id embedding vector, the ids  

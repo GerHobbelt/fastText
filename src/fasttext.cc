@@ -457,6 +457,11 @@ void FastText::skipgram(
   }
 }
 
+/**
+ * @brief Run model test/validation process.
+ *
+ * @return An `std::tuple<int64_t, double, double>` object. 
+ */
 std::tuple<int64_t, double, double>
 FastText::test(std::istream& in, int32_t k, real threshold) {
   Meter meter(false);
