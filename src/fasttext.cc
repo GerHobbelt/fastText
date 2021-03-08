@@ -193,6 +193,11 @@ void FastText::signModel(std::ostream& out) {
   out.write((char*)&(version), sizeof(int32_t));
 }
 
+/**
+ * @brief 
+ * Mainlly for saving model, but not only save model, also save model version sign 
+ * and sth like training parameters.
+ */
 void FastText::saveModel(const std::string& filename) {
   std::ofstream ofs(filename, std::ofstream::binary);
   if (!ofs.is_open()) {
@@ -878,7 +883,7 @@ std::shared_ptr<Matrix> FastText::createTrainOutputMatrix() const {
 
 /**
  * @brief 
- * Training and output fastTExt model. The training will be executed in 
+ * Training and output fastText model. The training will be executed in 
  * multi-threading mode.
  */
 void FastText::train(const Args& args, const TrainCallback& callback) {

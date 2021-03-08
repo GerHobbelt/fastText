@@ -99,6 +99,7 @@ class Args {
   double getAutotuneMetricValue() const;
   int64_t getAutotuneModelSize() const;
 
+  /// The default upper limit of model size
   static constexpr double kUnlimitedModelSize = -1.0;
 };
 } // namespace fasttext

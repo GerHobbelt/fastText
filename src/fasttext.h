@@ -39,6 +39,10 @@ class FastText {
  protected:
   std::shared_ptr<Args> args_;
   std::shared_ptr<Dictionary> dict_;
+  /// The input layer, which is a matrix, sort of embedding lookup layer, this 
+  /// will mapping the input-token-id to embedding vector, one dim of the 
+  /// matrix is same with the input tokens' number saving in `dict_`, another 
+  /// dim is same with the embedding size. 
   std::shared_ptr<Matrix> input_;
   std::shared_ptr<Matrix> output_;
   std::shared_ptr<Model> model_;

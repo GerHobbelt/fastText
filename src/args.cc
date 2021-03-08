@@ -105,6 +105,12 @@ std::string Args::metricToString(metric_name mn) const {
   return "Unknown metric name!"; // should never happen
 }
 
+/**
+ * @brief 
+ * Parsing, or extracting useful arguments from a full `Args` object, the extracting 
+ * logic will accord to the training mode with certain sub-arguments (which, for 
+ * for example, includes "supervised", "cbow", "autotuning", etc).
+ */
 void Args::parseArgs(const std::vector<std::string>& args) {
   std::string command(args[1]);
   if (command == "supervised") {
