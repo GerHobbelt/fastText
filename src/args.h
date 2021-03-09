@@ -44,6 +44,11 @@ class Args {
 
  public:
   Args();
+  /// The `input` may represent different stuff in different running scenario. 
+  /// For example, in supervised or unsupervised training scenario, the `input` 
+  /// represent training-data path; in product-quantize compression scenario, 
+  /// `input` represents the pretrained full-size model's path which will be 
+  /// compressed by PQ approach.
   std::string input;
   std::string output;
   double lr;

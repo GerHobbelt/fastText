@@ -318,14 +318,26 @@ void FastText::printInfo(real progress, real loss, std::ostream& log_stream) {
   log_stream << std::flush;
 }
 
+/**
+ * @brief 
+ * The purpose is to drop embedding vectors containing least info in 
+ * embedding matrix. We use the embedding vector's paramteers "magnitude" 
+ * to judging if this row (which is an embedding vector) will provide 
+ * more or less "information gain" for the model. And in fastText, we 
+ * use embedding-vector's l2-norm to judging this embedding vector's 
+ * "magnitude".
+ */
 std::vector<int32_t> FastText::selectEmbeddings(int32_t cutoff) const {
   std::shared_ptr<DenseMatrix> input =
       std::dynamic_pointer_cast<DenseMatrix>(input_);
+  /// Holding the l2-norm of each row for input layer's matrix, which is the 
+  /// embedding matrix, saving the results in `norms`.
   Vector norms(input->size(0));
   input->l2NormRow(norms);
   std::vector<int32_t> idx(input->size(0), 0);
   std::iota(idx.begin(), idx.end(), 0);
-  auto eosid = dict_->getId(Dictionary::EOS);
+  /// Get the id of end-of-sentance sign in embedding loolup table.
+  auto eosid = dict_->getId(Dictionary::EOS); /// 'eos' means end-of-sentence.
   std::sort(idx.begin(), idx.end(), [&norms, eosid](size_t i1, size_t i2) {
     if (i1 == eosid && i2 == eosid) { // satisfy strict weak ordering
       return false;
@@ -344,6 +356,7 @@ void FastText::quantize(const Args& qargs, const TrainCallback& callback) {
   args_->input = qargs.input;
   args_->qout = qargs.qout;
   args_->output = qargs.output;
+  /// NOTE: `input` is not same with `args_->input`. 
   std::shared_ptr<DenseMatrix> input =
       std::dynamic_pointer_cast<DenseMatrix>(input_);
   std::shared_ptr<DenseMatrix> output =

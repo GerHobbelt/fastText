@@ -87,6 +87,11 @@ void DenseMatrix::divideRow(const Vector& denoms, int64_t ib, int64_t ie) {
   }
 }
 
+/**
+ * @brief Calculate one row's l2-norm in this matrix instance.
+ *
+ * @param i The i-th row for this matrix which l2-norm will be calculated.
+ */
 real DenseMatrix::l2NormRow(int64_t i) const {
   auto norm = 0.0;
   for (auto j = 0; j < n_; j++) {
@@ -98,6 +103,10 @@ real DenseMatrix::l2NormRow(int64_t i) const {
   return std::sqrt(norm);
 }
 
+/**
+ * @brief Calculating each row's l2-norm for this matrix, saving the results in 
+ * `norms`.
+ */
 void DenseMatrix::l2NormRow(Vector& norms) const {
   assert(norms.size() == m_);
   for (auto i = 0; i < m_; i++) {
