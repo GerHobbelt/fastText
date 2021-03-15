@@ -320,12 +320,27 @@ void FastText::printInfo(real progress, real loss, std::ostream& log_stream) {
 
 /**
  * @brief 
- * The purpose is to drop embedding vectors containing least info in 
+ * The purpose is to drop embedding vectors containing least info-gain in 
  * embedding matrix. We use the embedding vector's paramteers "magnitude" 
  * to judging if this row (which is an embedding vector) will provide 
  * more or less "information gain" for the model. And in fastText, we 
  * use embedding-vector's l2-norm to judging this embedding vector's 
- * "magnitude".
+ * "magnitude". 
+ * Note, the eos (end-of-sentence sign) corresponding will be ranked at 
+ * top and kept anyway.
+ *
+ * @param cutoff The embedding vector which l2-norm ranking after `curoff` 
+ *     will be reomved since these vectors will be belived bringing less 
+ *     information-gain for model.
+ *
+ * @return 
+ * An embedding-id list, the list is sorted by each embedding-id's 
+ * correposnding vector l2-norm, the higher the l2-norm, the header the 
+ * id will be ranked. The list length is equal or smaller than `cutoff`, 
+ * this is because all ids ranking after `cutoff` will be removed, since 
+ * these ids' correponding vectors l2-norm is too smalll to provide 
+ * significate information-gain, so these embedding vectors are candidates 
+ * to pruned to decrease model size without lossing too much precision.
  */
 std::vector<int32_t> FastText::selectEmbeddings(int32_t cutoff) const {
   std::shared_ptr<DenseMatrix> input =
@@ -338,12 +353,20 @@ std::vector<int32_t> FastText::selectEmbeddings(int32_t cutoff) const {
   std::iota(idx.begin(), idx.end(), 0);
   /// Get the id of end-of-sentance sign in embedding loolup table.
   auto eosid = dict_->getId(Dictionary::EOS); /// 'eos' means end-of-sentence.
+  /// The following is the embedding-vectors' "magnitude" sorting rule.
   std::sort(idx.begin(), idx.end(), [&norms, eosid](size_t i1, size_t i2) {
     if (i1 == eosid && i2 == eosid) { // satisfy strict weak ordering
       return false;
     }
+    /// Putting the correponding index of embedding-vectors with larger l2-norm 
+    /// ahead of these with smaller l2-norm, note, the end-of-sentence embedding 
+    /// l2-norm will always larger than all other embeddings' l2-norm during 
+    /// the comparation.
     return eosid == i1 || (eosid != i2 && norms[i1] > norms[i2]);
   });
+  /// Only keep top-k large l2-norm embedding-vectors' index, which means the 
+  /// embeddings which l2-norm ranking after top-k elements will be removed. 
+  /// The "k" in top-k is equal with `cutoff`. 
   idx.erase(idx.begin() + cutoff, idx.end());
   return idx;
 }
@@ -364,8 +387,15 @@ void FastText::quantize(const Args& qargs, const TrainCallback& callback) {
   bool normalizeGradient = (args_->model == model_name::sup);
 
   if (qargs.cutoff > 0 && qargs.cutoff < input->size(0)) {
+    /// `idx` contains all embedding-id which embedding-vector will 
+    /// not be pruned.
     auto idx = selectEmbeddings(qargs.cutoff);
+    /// Pruning all embedding-vector which embedding-id are not in 
+    /// `idx` from embedding dictionary.
     dict_->prune(idx);
+    /// According the target keeping embedding-id, migrate the embedding 
+    /// vectors from unpruned-embedding-matrix to new pruned embedding 
+    /// matrix `ninput`.
     std::shared_ptr<DenseMatrix> ninput =
         std::make_shared<DenseMatrix>(idx.size(), args_->dim);
     for (auto i = 0; i < idx.size(); i++) {
@@ -374,6 +404,12 @@ void FastText::quantize(const Args& qargs, const TrainCallback& callback) {
       }
     }
     input = ninput;
+    /// TODO:
+    /// It seems fastText does not adopt the quantization-training-rotation 
+    /// compression mode as mentioned in paper 
+    /// "FASTTEXT.ZIP- COMPRESSING TEXT CLASSIFICATION MODELS", it just firstly 
+    /// pruned useless embedding according l2-norm, then retraining model for 
+    /// several epochs, and finally executing product-quantization.
     if (qargs.retrain) {
       args_->epoch = qargs.epoch;
       args_->lr = qargs.lr;

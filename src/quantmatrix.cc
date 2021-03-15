@@ -29,18 +29,46 @@ QuantMatrix::QuantMatrix(DenseMatrix&& mat, int32_t dsub, bool qnorm)
   quantize(std::forward<DenseMatrix>(mat));
 }
 
+/**
+ * @brief
+ * This is sort of executing product-quantization on an 1-dimension 
+ * l2-norm vector, each element of this vector represents an l2-norm 
+ * value for one embedding in embedding matrix. 
+ *
+ * This may sound wierd but not very hard to understand, for example, 
+ * the k-means process in product-quantization is just run on several 
+ * points located on an 1-dim space (axis).
+ *
+ * TODO: My guess is, the reason to do this when we needs to add 
+ * normalization step in PQ process, the qunatized l2-norm vector 
+ * can keep certain "computational consistancy" with the following 
+ * quantized embedding matrix. You know, the following quantized 
+ * embedding matrix is an `QuantMatrix` object, and only an 
+ * `QuantMatrix` object can doing some mathematical opration with it. 
+ * BUT, the quantization of l2-norm vector and embedding-matrix do 
+ * not have to share the same product-quantization parameters, such 
+ * as subquantizer number. 
+ */
 void QuantMatrix::quantizeNorm(const Vector& norms) {
   assert(qnorm_);
   assert(norms.size() == m_);
   auto dataptr = norms.data();
-  npq_->train(m_, dataptr);
+  npq_->train(m_, dataptr); // `m_` is the size of `norms` vector.
   npq_->compute_codes(dataptr, norm_codes_.data(), m_);
 }
 
+/**
+ * @brief 
+ * Executing the Product-Quantization on an matrix `mat`.
+ */
 void QuantMatrix::quantize(DenseMatrix&& mat) {
   if (qnorm_) {
+    /// The following tow line calculating each row's l2-norm for  
+    /// input matrix `mat` and saving the results into `norms`. 
     Vector norms(mat.size(0));
     mat.l2NormRow(norms);
+    /// Normalizing each row of `mat` by dividing each row with its 
+    /// corresponding l2-norm.
     mat.divideRow(norms);
     quantizeNorm(norms);
   }

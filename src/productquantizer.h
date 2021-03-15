@@ -21,17 +21,37 @@ namespace fasttext {
 
 class ProductQuantizer {
  protected:
+  /// `nbits_` means how many bit will used to represent the number of 
+  /// centroids for (each) sub-vector-space in product-quantization process. 
+  /// Here `nbits_ = 8` implies an `int8` data-type can records all centroid 
+  /// id for one sub-space in PQ-codebook.
+  ///
+  /// So, one important point is,  the value of `nbits_` decides how many 
+  /// clusters in each sub-vector-space during k-means training.
+  ///
+  /// In this way, even if each element in original vector is `float32`, we can 
+  /// represent these each element with an `int8` variable, each `int8` variable 
+  /// is an centroid id which corresponding to an centriod vector 
+  /// (cluster-center-vector) recorded in codebook.
   const int32_t nbits_ = 8;
+  /// 1 is 01, `nbits_ = 8`, so `1 << nbits_` is `1 << 8`, and the result is 
+  /// `100000000`, which is 256 in decimalism. `ksub_` represents the centroids 
+  /// number for each sub-vector-spaces in product-quantization.
   const int32_t ksub_ = 1 << nbits_;
   const int32_t max_points_per_cluster_ = 256;
   const int32_t max_points_ = max_points_per_cluster_ * ksub_;
   const int32_t seed_ = 1234;
+  /// K-means EM training iteration times.
   const int32_t niter_ = 25;
   const real eps_ = 1e-7;
 
   int32_t dim_;
+  /// Refer to paper, `nsubq_` means "number of sub-quantizer", this is 
+  /// also the number of sub-vectors (sub-spaces) splitted from the 
+  /// original vector. 
   int32_t nsubq_;
-  int32_t dsub_;
+  /// TODO: `dsub_` means "dimension of each subvectors" in PQ process? 
+  int32_t dsub_;  
   int32_t lastdsub_;
 
   std::vector<real> centroids_;

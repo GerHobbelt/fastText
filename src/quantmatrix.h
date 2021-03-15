@@ -28,6 +28,7 @@ namespace fasttext {
 class QuantMatrix : public Matrix {
  protected:
   std::unique_ptr<ProductQuantizer> pq_;
+  /// `npq_` represents "norm product quantization".
   std::unique_ptr<ProductQuantizer> npq_;
 
   std::vector<uint8_t> codes_;

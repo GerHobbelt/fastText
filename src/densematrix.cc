@@ -104,8 +104,8 @@ real DenseMatrix::l2NormRow(int64_t i) const {
 }
 
 /**
- * @brief Calculating each row's l2-norm for this matrix, saving the results in 
- * `norms`.
+ * @brief 
+ * Calculating each row's l2-norm for this matrix, saving results in `norms`.
  */
 void DenseMatrix::l2NormRow(Vector& norms) const {
   assert(norms.size() == m_);

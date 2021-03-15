@@ -146,18 +146,53 @@ void ProductQuantizer::kmeans(const real* x, real* c, int32_t n, int32_t d) {
   }
 }
 
+/**
+ * @brief
+ * Training process for a Prodcut-Quantization. The process mainly training 
+ * a k-means model on an one-dimentsion vector, precisely, mainly executed 
+ * on an l2-norm vector for embedding-matrix.
+ */
 void ProductQuantizer::train(int32_t n, const real* x) {
+  /// The number of items waiting for splitting to several sub-vectors 
+  /// (or sub-elements) and then processing k-means should be larger than 
+  /// target k-means cluster number.
   if (n < ksub_) {
     throw std::invalid_argument(
         "Matrix too small for quantization, must have at least " +
         std::to_string(ksub_) + " rows");
   }
   std::vector<int32_t> perm(n, 0);
+  /// TODO: `std::iota` will let `perm` be an incremental series of numbers, 
+  /// such as [0, 1, 2, ..., n-1]. But why?
   std::iota(perm.begin(), perm.end(), 0);
+  /// `dsub_` is the dimension of each sub-vector(sub-space) in 
+  /// product-quantization process. 
   auto d = dsub_;
+  /// `np` means "number of points" for each iteration EM training of k-means, 
+  /// similiar with the notion of "batch-size". But the difference is these 
+  /// "batch" is not a subset splited from full data, but sampled from the full 
+  /// data. 
+  ///
+  /// For example, suppose we has `n` embedding vectors, and we want training 
+  /// a k-means model for each subquantizer by EM algorithm. If we set, for 
+  /// each EM training iteration we the training data size is `np`, what 
+  /// fastText do is sampling `np` samples from full data with size `n` by:
+  ///   * Shuffling input original matrix (or vector in l2-norm PQ case)
+  ///   * Using first `np` sample from shuffled data as training data for 
+  ///     current EM training iteration.
+  ///
+  /// So, the max value of `np` can not larger than `n`, which is the number 
+  /// of embedding vectors. The extreme case we only execute single iteration 
+  /// EM training algorithm and feeding all data as a "huge" batch with size 
+  /// as `n`.
   auto np = std::min(n, max_points_);
   auto xslice = std::vector<real>(np * dsub_);
-  for (auto m = 0; m < nsubq_; m++) {
+  /// `nsubq_` means "number of subquantizers", which is same with 
+  /// subvector number.
+  /// The following for-loop block iterates along each subvector and training 
+  /// corresponding subquantizer.
+  for (auto m = 0; m < nsubq_; m++) { 
+    /// Mark the last subquantizer. 
     if (m == nsubq_ - 1) {
       d = lastdsub_;
     }
