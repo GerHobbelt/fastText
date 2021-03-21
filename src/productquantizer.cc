@@ -151,6 +151,22 @@ void ProductQuantizer::kmeans(const real* x, real* c, int32_t n, int32_t d) {
  * Training process for a Prodcut-Quantization. The process mainly training 
  * a k-means model on an one-dimentsion vector, precisely, mainly executed 
  * on an l2-norm vector for embedding-matrix.
+ *
+ * @param x
+ * The pointer points to the first element of a `Vector` or `Matrix` object.
+ * 
+ * When doing PQ for l2-norm vector of embedding-matrix, then PQ target is 
+ * `n` numbers of elements in `Vector`, each element value represents l2-norm 
+ * corresponding one embedding vector in embedding-matrix, and during the 
+ * k-means process in PQ, each element will be handled as an one-dimension 
+ * vector.
+ *
+ * When doing PQ for embedding-matrix, the PQ target is a `Matrix` object. 
+ * In this case, the minimum data unit is each embedding-vector.
+ *
+ * @param n
+ * The number of records using to execute prodcut-quantization process. 
+ * `n` is usually same with the embedding vector number.
  */
 void ProductQuantizer::train(int32_t n, const real* x) {
   /// The number of items waiting for splitting to several sub-vectors 
@@ -165,8 +181,13 @@ void ProductQuantizer::train(int32_t n, const real* x) {
   /// TODO: `std::iota` will let `perm` be an incremental series of numbers, 
   /// such as [0, 1, 2, ..., n-1]. But why?
   std::iota(perm.begin(), perm.end(), 0);
-  /// `dsub_` is the dimension of each sub-vector(sub-space) in 
-  /// product-quantization process. 
+  /// `dsub_` means "dimension of subquantizers/subvectors/subspaces", which 
+  /// is the dimension of each sub-vector(sub-space) in product-quantization 
+  /// process. 
+  ///
+  /// In the case of l2-norm vector prodcut-quantization, `dsub_` equals 1.
+  /// In the case of embedding matrix prodcut-quantization, `dsub_` equals 
+  /// embedding size (embedding-dimension). 
   auto d = dsub_;
   /// `np` means "number of points" for each iteration EM training of k-means, 
   /// similiar with the notion of "batch-size". But the difference is these 
@@ -186,22 +207,48 @@ void ProductQuantizer::train(int32_t n, const real* x) {
   /// EM training algorithm and feeding all data as a "huge" batch with size 
   /// as `n`.
   auto np = std::min(n, max_points_);
+  /// TODO:
+  /// `xslice` is the container for holding each training-iteration's training 
+  /// data.
+  /// A l2-norm vector product-quantization example, suggest we have n embedding 
+  /// vectors' l2-norm, and each EM k-means training-iteration's number of data 
+  /// `np`  
   auto xslice = std::vector<real>(np * dsub_);
   /// `nsubq_` means "number of subquantizers", which is same with 
   /// subvector number.
   /// The following for-loop block iterates along each subvector and training 
   /// corresponding subquantizer.
+  ///
+  /// One important fact is, when executing PQ on embedding-matrix's l2-norm 
+  /// vector, the target of PQ is not conventional vector, but some scalars 
+  /// which represent certain embedding-vectors l2-norm value. At this time, 
+  /// `ProductQuantizer::train` will regards these scalars as one-dimension 
+  /// vectors and executring k-means on them during PQ process. And at the 
+  /// same time, since each "vector" is an one-dimension vector, so the number 
+  /// of subquantizer/subvector/subspace can only be 1. 
   for (auto m = 0; m < nsubq_; m++) { 
     /// Mark the last subquantizer. 
     if (m == nsubq_ - 1) {
       d = lastdsub_;
     }
+    /// TODO:
+    /// Shuffle the k-means training "samples", with each block of `rng` number 
+    /// of element as the minimum shuffle unit.
+    /// In 
     if (np != n) {
       std::shuffle(perm.begin(), perm.end(), rng);
     }
     for (auto j = 0; j < np; j++) {
       memcpy(
+          /// j-th sample's vector starting address.
           xslice.data() + j * d,
+          /// We can decompose the follow line's expression into several parts:
+          /// `x`: 
+          ///     The start pointer of input data, which points the address of 
+          ///     the first input element.
+          /// `x + perm[j] * dim_`: 
+          ///     The starting pointer of current target PQ vector.
+          ///  
           x + perm[j] * dim_ + m * dsub_,
           d * sizeof(real));
     }

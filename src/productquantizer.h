@@ -50,7 +50,14 @@ class ProductQuantizer {
   /// also the number of sub-vectors (sub-spaces) splitted from the 
   /// original vector. 
   int32_t nsubq_;
-  /// TODO: `dsub_` means "dimension of each subvectors" in PQ process? 
+  /// TODO: 
+  /// `dsub_` means "dimension of subquantizers/subvectors/subspaces", which 
+  /// is the dimension of each sub-vector(sub-space) in product-quantization 
+  /// process. 
+  ///
+  /// In the case of l2-norm vector prodcut-quantization, `dsub_` equals 1.
+  /// In the case of embedding matrix prodcut-quantization, `dsub_` equals 
+  /// embedding size (embedding-dimension).
   int32_t dsub_;  
   int32_t lastdsub_;
 
