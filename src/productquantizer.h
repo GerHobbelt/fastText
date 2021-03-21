@@ -45,19 +45,35 @@ class ProductQuantizer {
   const int32_t niter_ = 25;
   const real eps_ = 1e-7;
 
+  /// TODO: ?
+  /// Dimention of target product-quantizing vectors.
+  ///
+  /// When executing PQ on embedding-matrix's l2-norm vector, each element in 
+  /// this l2-norm vector will be seem and handle as an one-dimentional vector 
+  /// during PQ (and k-means in PQ) process, so in this case `dim_` equals to 1.
+  ///
+  /// When executing PQ on embedding-matrix, `dim_` should be same with the 
+  /// embedding size (embedding dimention).
   int32_t dim_;
   /// Refer to paper, `nsubq_` means "number of sub-quantizer", this is 
   /// also the number of sub-vectors (sub-spaces) splitted from the 
   /// original vector. 
   int32_t nsubq_;
-  /// TODO: 
   /// `dsub_` means "dimension of subquantizers/subvectors/subspaces", which 
   /// is the dimension of each sub-vector(sub-space) in product-quantization 
   /// process. 
+  /// 
+  /// One import point is, the dimension of subvectors can only smaller or 
+  /// equal with the dimension of original vactors, so `dsub_` always smaller 
+  /// or equal with `dim_`.
   ///
-  /// In the case of l2-norm vector prodcut-quantization, `dsub_` equals 1.
-  /// In the case of embedding matrix prodcut-quantization, `dsub_` equals 
-  /// embedding size (embedding-dimension).
+  /// Another important point is, `dim_` should be divided evenly by `dsub_`.
+  ///
+  /// In the case of l2-norm vector prodcut-quantization, `dsub_` can only 
+  /// equals to 1.
+  /// In the case of embedding matrix prodcut-quantization, `dsub_` smaller 
+  /// or equal with embedding size (embedding-dimension), and could make 
+  /// `dim_` be divided evenly by it.
   int32_t dsub_;  
   int32_t lastdsub_;
 
