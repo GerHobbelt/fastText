@@ -53,15 +53,36 @@ real* ProductQuantizer::get_centroids(int32_t m, uint8_t i) {
   return &centroids_[(m * ksub_ + i) * dsub_];
 }
 
+/**
+ * @brief
+ * Assign most optimized centroid id for one sample vector, based on 
+ * current k-means model, which means, re-arrange one vector's 
+ * centroid id to its current closest centroid.
+ *
+ * @param x 
+ * The pointer points k-means' one training data's first element.
+ * @param c0 
+ * The pointer points k-means' first centroid vector's first element.
+ * @param code 
+ * Records (for current stage) one sample vector's belonging centroid id.
+ * @param d
+ * The sample-vector/centroid-vector's dimension, both are same.
+ */
 real ProductQuantizer::assign_centroid(
     const real* x,
     const real* c0,
     uint8_t* code,
     int32_t d) const {
+  /// `c` points current using sample-vector's first element. This will 
+  /// be update in following for-loop. The minimum update unit is each 
+  /// `d` element, which will let `c` points the first element of next 
+  /// vector.
   const real* c = c0;
-  real dis = distL2(x, c, d);
+  real dis = distL2(x, c, d); /// Calculate l2-distance.
   code[0] = 0;
+  /// `ksub_` is same with centroid number.
   for (auto j = 1; j < ksub_; j++) {
+    /// Let `c` pointing to the first element of next centroid vector.
     c += d;
     real disij = distL2(x, c, d);
     if (disij < dis) {
@@ -72,44 +93,120 @@ real ProductQuantizer::assign_centroid(
   return dis;
 }
 
+/**
+ * @brief
+ * Expectation step of k-means EM training algorithm. The E-step is used of 
+ * the iteration of the hidden parameters. In k-means case, the hidden 
+ * parameters is each sample's belonging relationgships with each centroid.
+ *
+ * The process is, fix each centroid's vector, re-assign each sample vector 
+ * to its closest centroid.
+ *
+ * @param x Refer to parameter `x` in `ProductQuantizer::kmeans`.
+ * @param centroids Refer to parameter `c` in `ProductQuantizer::kmeans`.
+ * @param codes Refer to variable `codes` in `ProductQuantizer::kmeans`.
+ * @param d Refer to parameter `d` in `ProductQuantizer::kmeans`. 
+ * @param n Refer to parameter `n` in `ProductQuantizer::kmeans`.  
+ */
 void ProductQuantizer::Estep(
     const real* x,
     const real* centroids,
     uint8_t* codes,
     int32_t d,
     int32_t n) const {
+  /// Iterate along each sample-vector, based on current mode, assign the 
+  /// closest centroid id to each sample-vector.
   for (auto i = 0; i < n; i++) {
+    /// Explaination of some variables:
+    ///    `x + i * d`:
+    ///        The pointer points i-th sample-vector's first element.
+    ///    `codes + i`:
+    ///        The pointer points i-th sample-vector's corresponding centroid 
+    ///        id, which is saved as an element in codebook `codes`. 
     assign_centroid(x + i * d, centroids, codes + i, d);
   }
 }
 
+/**
+ * @brief
+ * Maximization step of k-means EM training algorithm. 
+ * 
+ * The target is, based on E-step's optimized result's relationship 
+ * of which centroid each sample vector belongs to, optimizing each 
+ * centroid's vector to make the current stage's cluetering has 
+ * maximizer "probability", which means, by fixing current sample-centroid 
+ * relationship, adjusting each centroid's vector to make the average 
+ * distance from this centroid to the samples belonging to it be smaller.
+ *
+ * To get this target, we can just re-calculated one centroid vector by 
+ * averaging all sample's vector beloing to it at current stage.
+ *
+ * `ProductQuantizer::MStep` decomposes k-means M-step in tow stage:
+ *     1. Accumulation stage:
+ *            For each centroid, calculates an vector by accumulation all 
+ *            the vectors of samples belong to that centroid.
+ *     2. Averaging stage:
+ *            Averaging each centroid's accumulation vector by dividing 
+ *            by the count of samples belonging to that centroid.
+ * And finally, each centroid's averaged accumulation vector is the new 
+ * centroid vector of that centroid.
+ *
+ * @param x0 Refer to parameter `x` in `ProductQuantizer::kmeans`.
+ * @param centroids Refer to parameter `c` in `ProductQuantizer::kmeans`.
+ * @param codes Refer to variable `codes` in `ProductQuantizer::kmeans`.
+ * @param d Refer to parameter `d` in `ProductQuantizer::kmeans`. 
+ * @param n Refer to parameter `n` in `ProductQuantizer::kmeans`. 
+ */
 void ProductQuantizer::MStep(
     const real* x0,
     real* centroids,
     const uint8_t* codes,
     int32_t d,
     int32_t n) {
+  /// `nelts` is a counter, which counts for each centroid, how many 
+  /// samples belong to it. These counting value will be useful 
   std::vector<int32_t> nelts(ksub_, 0);
+  /// Re-initialize each centroid vectors to zero vector. Which will 
+  /// be used to execute accumulating-sum of M-step.
   memset(centroids, 0, sizeof(real) * d * ksub_);
+  /// Initialize `x` as the pointer points the first element of the 
+  /// first sample vector, which is `x0`.
   const real* x = x0;
+  /// Iterates along n training samples.
   for (auto i = 0; i < n; i++) {
+    /// `k` represents the centroid id of , at current stage, for 
+    /// this sample, which centroid it belongs to.
     auto k = codes[i];
+    /// `c` is the pointer points the first element of this sample's 
+    /// belonging centroid vector. `d` is vector's size. 
     real* c = centroids + k * d;
+    /// Accumulates this sample vector's each element to its corresponding 
+    /// element in this sample's belonging centroid vector.
     for (auto j = 0; j < d; j++) {
       c[j] += x[j];
     }
+    /// Update the sample-counting of current sample's belonging centroid.
     nelts[k]++;
+    /// Put the pointer to the first element of next sample vector.
     x += d;
   }
 
+  /// Re-initialize `c` of above code block.
   real* c = centroids;
+  /// Iterates along each centroid, executes averaging operation for 
+  /// each centroid's sample-accumulation vector with its sample's 
+  /// count.
   for (auto k = 0; k < ksub_; k++) {
+    /// `z` is the count of the samples belonging to current centroid.
     real z = (real)nelts[k];
     if (z != 0) {
+      /// Averging each centroid samples' accumulation vector by dividing 
+      /// each element with this centroid's sample count `z`/`nelts[k]`.
       for (auto j = 0; j < d; j++) {
         c[j] /= z;
       }
     }
+    /// Let `c` points to the first element of next centroid's vector.
     c += d;
   }
 
@@ -132,14 +229,47 @@ void ProductQuantizer::MStep(
   }
 }
 
+/**
+ * @brief
+ * Executing k-means training for product-quantization.
+ *
+ * @param x
+ * The pointer points the address of the first element of k-means training 
+ * data, correposnding the `xslice.data()` in `ProductQuantizer::train`. 
+ * @param c
+ * The pointer points the array of k-means centroids' vectors. 
+ * @param n
+ * `n` represents how many sample will be used to training k-means model.
+ * Note here `n` is totally different with `n` in `ProductQuantizer::train`, 
+ * in `ProductQuantizer::train`, `n` is same with the number of embedding 
+ * vectors, but here `n` represent the size of k-means training data, so 
+ * it's corresponding `np` in `ProductQuantizer::train`.
+ * @param d
+ * The number of subquantizers/subvectors in PQ.
+ */
 void ProductQuantizer::kmeans(const real* x, real* c, int32_t n, int32_t d) {
+  /// What the following 6 lines do is:
+  ///     1. Assign each k-means training sample a ID, from 0 to n-1, such as 
+  ///        [0, 1, 2, ..., n-1].
+  ///     2. Randomly assign `ksub_` sample vector as k-means centroids, by 
+  ///        firstly shuffle the samples' id list and then choose first `Ksub_` 
+  ///        vector as initialized `ksub_` k-means centroids.
+  ///     3. Put the randomly-choosen initializing k-means centroids' vectors
+  ///        into the memory-space pointed by `c`.
   std::vector<int32_t> perm(n, 0);
   std::iota(perm.begin(), perm.end(), 0);
   std::shuffle(perm.begin(), perm.end(), rng);
   for (auto i = 0; i < ksub_; i++) {
     memcpy(&c[i * d], x + perm[i] * d, d * sizeof(real));
   }
+  /// `codes` represents codes id in PQ's subquantizer's codebook. The number  
+  /// of codes id types should be same with the PQ clustering centroid number.
+  /// Each of these `n` samples(subvectors) will corresponding one of `ksub_` 
+  /// centroid id.
+  /// So, for example, the k-th element value in `codes` represents k-th 
+  /// subvector's belonging centroid id. 
   auto codes = std::vector<uint8_t>(n);
+  /// Executing EM algorithm to training k-means for `niter_` iterations.
   for (auto i = 0; i < niter_; i++) {
     Estep(x, c, codes.data(), d, n);
     MStep(x, c, codes.data(), d, n);
@@ -148,7 +278,7 @@ void ProductQuantizer::kmeans(const real* x, real* c, int32_t n, int32_t d) {
 
 /**
  * @brief
- * Training process for a Prodcut-Quantization. The process mainly training 
+ * Training process for a Product-Quantization. The process mainly training 
  * a k-means model on an one-dimentsion vector, precisely, mainly executed 
  * on an l2-norm vector for embedding-matrix.
  *

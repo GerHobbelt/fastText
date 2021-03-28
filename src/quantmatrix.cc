@@ -70,6 +70,7 @@ void QuantMatrix::quantize(DenseMatrix&& mat) {
     /// Normalizing each row of `mat` by dividing each row with its 
     /// corresponding l2-norm.
     mat.divideRow(norms);
+    /// Training the product-quantizer for embedding matrix's l2-norm vector
     quantizeNorm(norms);
   }
   auto dataptr = mat.data();

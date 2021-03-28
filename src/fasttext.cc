@@ -756,8 +756,8 @@ bool FastText::keepTraining(const int64_t ntokens) const {
  */
 void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
   std::ifstream ifs(args_->input);
-  /// The following line venly distributed the input `std::ifstream` to 
-  /// `args_->thread` numbers of stream 'shards', bass on this data-parallel 
+  /// The following line evenly splitted the input `std::ifstream` to 
+  /// `args_->thread` numbers of stream 'shards', based on this data-parallel 
   /// mode, fastText can execute training process in multiple thread. 
   /// Suppose among input stream, there are n chars, and we have k threads, 
   /// so each thread is responsible for training the model with `n / k` chars 

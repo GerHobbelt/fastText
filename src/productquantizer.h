@@ -36,7 +36,7 @@ class ProductQuantizer {
   const int32_t nbits_ = 8;
   /// 1 is 01, `nbits_ = 8`, so `1 << nbits_` is `1 << 8`, and the result is 
   /// `100000000`, which is 256 in decimalism. `ksub_` represents the centroids 
-  /// number for each sub-vector-spaces in product-quantization.
+  /// number for each subquantizers' k-means process.
   const int32_t ksub_ = 1 << nbits_;
   const int32_t max_points_per_cluster_ = 256;
   const int32_t max_points_ = max_points_per_cluster_ * ksub_;
