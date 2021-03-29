@@ -78,6 +78,10 @@ void QuantMatrix::quantize(DenseMatrix&& mat) {
   pq_->compute_codes(dataptr, codes_.data(), m_);
 }
 
+/**
+ * @brief
+ * Executes dot-product for `vec` and `i`-th row of `QuantMatrix`. 
+ */
 real QuantMatrix::dotRow(const Vector& vec, int64_t i) const {
   assert(i >= 0);
   assert(i < m_);

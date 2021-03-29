@@ -73,6 +73,7 @@ class Args {
   bool saveOutput;
   int seed;
 
+  /// If executes product-quantization for output layer.
   bool qout;
   bool retrain;
   bool qnorm;

@@ -98,14 +98,17 @@ void Model::computeHidden(const std::vector<int32_t>& input, State& state)
 /**
  * @brief
  * The predict or inference process. This process consists of two stages. 
+ *
  * The first stage is calculation of "hidden vector" mentioned in 
  * `Model::computeHidden`, this gives out an average embedding vector. 
+ *
  * The second stage is inference step with given hidden average embedding 
  * vector. This process is executed by `loss_`, which is an Loss instance, 
- * such as a `SoftmaxLoss` instance. The reason of this design is the 
- * second stage will be execute both during inference and forward-propogate 
- * during training, so put it into loss instance can let this step has 
- * reusability.
+ * such as a `SoftmaxLoss` instance. 
+ *
+ * The reason of this design is the second stage will be executed both 
+ * during inference and forward-propogate in training step, so put it into 
+ * loss instance can let this step has more reusability.
  *
  * @param input The input of the model, which is a `std::vector<int32_t>` 
  *   instance, each element is a token, which is one of text's word and 

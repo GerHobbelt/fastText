@@ -394,8 +394,10 @@ void FastText::quantize(const Args& qargs, const TrainCallback& callback) {
     /// `idx` from embedding dictionary.
     dict_->prune(idx);
     /// According the target keeping embedding-id, migrate the embedding 
-    /// vectors from unpruned-embedding-matrix to new pruned embedding 
-    /// matrix `ninput`.
+    /// vectors from unpruned-embedding-matrix to new pruned (tokens which not 
+    /// very imnportance according its embedding vector's l2-norm will be pruned) 
+    /// embedding matrix `ninput`. 
+    /// In fastText case, the input/ninput is just embedding matrix.
     std::shared_ptr<DenseMatrix> ninput =
         std::make_shared<DenseMatrix>(idx.size(), args_->dim);
     for (auto i = 0; i < idx.size(); i++) {
@@ -420,14 +422,28 @@ void FastText::quantize(const Args& qargs, const TrainCallback& callback) {
       startThreads(callback);
     }
   }
+  
+  /// Convert `DenseMatrix` embedding-matrix(input-layer) with unimportance-token-pruned 
+  /// to an `QuantMatrix` object for product-quantization.
   input_ = std::make_shared<QuantMatrix>(
       std::move(*(input.get())), qargs.dsub, qargs.qnorm);
 
+  /// If executes product-quantization for output layer.
   if (args_->qout) {
+    /// The output layer is using to map hidden-layer to logits vector (each 
+    /// logit corresponds to one output laber), so we don't prune this matrix, 
+    /// just directly convert it to an `QuantMatrix`. 
     output_ = std::make_shared<QuantMatrix>(
         std::move(*(output.get())), 2, qargs.qnorm);
   }
+  /// Marks product-quantization flag to `true`.
   quant_ = true;
+  /// Since in product-quantization case, for parameters-matrixs, we replace
+  /// `DenseMatrix` with `QuantMatrix`, and compare with `DenseMatrix`, 
+  /// `QuantMatrix` overloads/redefine some matrix-oprations, such as matrix 
+  /// multiplication between `QuantMatrix`s or `DenseMatrix` and `QuantMatrix` 
+  /// to "automatically" let the quangtized-model adapts for the same pipline 
+  /// with original model, without any api changing.
   auto loss = createLoss(output_);
   model_ = std::make_shared<Model>(input_, output_, loss, normalizeGradient);
 }
@@ -961,7 +977,7 @@ void FastText::train(const Args& args, const TrainCallback& callback) {
   }
   /// Initializing ouput layer related parameters.
   output_ = createTrainOutputMatrix();
-  /// If using product-quantilize to compression model, default not.
+  /// If executed product-quantilize to compression model, default not.
   quant_ = false;
   /// Define loss function.
   auto loss = createLoss(output_);
