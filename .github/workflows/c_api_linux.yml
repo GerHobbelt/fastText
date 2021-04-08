@@ -32,7 +32,7 @@ jobs:
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: olegtarasov/get-tag@v2
+      - uses: olegtarasov/get-tag@v2.1
       - uses: nuget/setup-nuget@v1
       - name: Build
         run: |
@@ -54,7 +54,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: olegtarasov/get-tag@v2
+      - uses: olegtarasov/get-tag@v2.1
       - uses: nuget/setup-nuget@v1
       - name: Build
         run: |

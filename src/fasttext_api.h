@@ -189,8 +189,8 @@ public:
 };
 
 // Progress callbacks
-typedef void (__cdecl * TrainProgressCallback)(float progress, float loss, double wst, double lr, int64_t eta);
-typedef void (__cdecl * AutotuneProgressCallback)(double progress, int32_t trials, double bestScore, double eta);
+typedef void (* TrainProgressCallback)(float progress, float loss, double wst, double lr, int64_t eta);
+typedef void (* AutotuneProgressCallback)(double progress, int32_t trials, double bestScore, double eta);
 
 // Errors
 FT_API(void) GetLastErrorText(char** error);
