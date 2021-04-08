@@ -664,7 +664,7 @@ void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
       if (localTokenCount > args_->lrUpdateRate) {
         tokenCount_ += localTokenCount;
         localTokenCount = 0;
-        if (threadId == 0 && args_->verbose > 1) {
+        if (threadId == 0) {
           loss_ = state.getLoss();
         }
       }
