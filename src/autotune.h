@@ -41,6 +41,9 @@ class AutotuneStrategy {
 };
 
 class Autotune {
+public:
+    using AutotuneCallback =
+        std::function<void(double progress, int32_t trials, double bestScore, double eta)>;
  protected:
   FastText* fastText_;
   double elapsed_;
@@ -50,6 +53,8 @@ class Autotune {
   std::atomic<bool> continueTraining_;
   std::unique_ptr<AutotuneStrategy> strategy_;
   std::thread timer_;
+  AutotuneCallback callback_;
+  int verbose_;
 
   bool keepTraining(double maxDuration) const;
   void printInfo(double maxDuration);
@@ -83,7 +88,7 @@ class Autotune {
   Autotune& operator=(Autotune&&) = delete;
   ~Autotune() noexcept = default;
 
-  void train(const Args& args);
+  void train(const Args& args, const AutotuneCallback& callback = {});
 };
 
 } // namespace fasttext

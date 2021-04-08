@@ -213,26 +213,39 @@ Autotune::Autotune(FastText* fastText)
       sizeConstraintFailed_(0),
       continueTraining_(false),
       strategy_(),
-      timer_() {}
+      timer_(),
+      callback_(),
+      verbose_(0){}
 
 void Autotune::printInfo(double maxDuration) {
   double progress = elapsed_ * 100 / maxDuration;
   progress = std::min(progress, 100.0);
+  int32_t eta = (int32_t)std::max(maxDuration - elapsed_, 0.0);
 
-  std::cerr << "\r";
-  std::cerr << std::fixed;
-  std::cerr << "Progress: ";
-  std::cerr << std::setprecision(1) << std::setw(5) << progress << "%";
-  std::cerr << " Trials: " << std::setw(4) << trials_;
-  std::cerr << " Best score: " << std::setw(9) << std::setprecision(6);
-  if (bestScore_ == kUnknownBestScore) {
-    std::cerr << "unknown";
-  } else {
-    std::cerr << bestScore_;
+  if (this->verbose_ > 0)
+  {
+      std::cerr << "\r";
+      std::cerr << std::fixed;
+      std::cerr << "Progress: ";
+      std::cerr << std::setprecision(1) << std::setw(5) << progress << "%";
+      std::cerr << " Trials: " << std::setw(4) << trials_;
+      std::cerr << " Best score: " << std::setw(9) << std::setprecision(6);
+      if (bestScore_ == kUnknownBestScore) {
+          std::cerr << "unknown";
+      }
+      else {
+          std::cerr << bestScore_;
+      }
+
+      std::cerr << " ETA: "
+                << utils::ClockPrint(eta);
+      std::cerr << std::flush;
   }
-  std::cerr << " ETA: "
-            << utils::ClockPrint(std::max(maxDuration - elapsed_, 0.0));
-  std::cerr << std::flush;
+
+  if (this->callback_)
+  {
+      this->callback_(progress, trials_, bestScore_, eta);
+  }
 }
 
 void Autotune::timer(
@@ -380,12 +393,15 @@ void Autotune::printSkippedArgs(const Args& autotuneArgs) {
   }
 }
 
-void Autotune::train(const Args& autotuneArgs) {
+void Autotune::train(const Args& autotuneArgs, const AutotuneCallback& callback) {
   std::ifstream validationFileStream(autotuneArgs.autotuneValidationFile);
   if (!validationFileStream.is_open()) {
     throw std::invalid_argument("Validation file cannot be opened!");
   }
   printSkippedArgs(autotuneArgs);
+
+  this->callback_ = callback;
+  this->verbose_ = autotuneArgs.autotuneVerbose;
 
   bool sizeConstraintWarning = false;
   int verbose = autotuneArgs.verbose;

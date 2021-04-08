@@ -71,6 +71,7 @@ class Args {
   int autotunePredictions;
   int autotuneDuration;
   std::string autotuneModelSize;
+  int autotuneVerbose;
 
   void parseArgs(const std::vector<std::string>& args);
   void printHelp();

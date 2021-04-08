@@ -247,6 +247,7 @@ FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args)
 
 
 FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, AutotuneArgs autotuneArgs,
+        TrainProgressCallback trainCallback, AutotuneProgressCallback autotuneCallback,
         const char* label, const char* pretrainedVectors, bool debug)
 {
     auto fastText = static_cast<FastTextWrapper*>(hPtr);
@@ -313,7 +314,8 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArg
             << EMPTYIFNULL(autotuneArgs.metric) << endl
             << autotuneArgs.predictions << endl
             << autotuneArgs.duration << endl
-            << EMPTYIFNULL(autotuneArgs.modelSize) << endl;
+            << EMPTYIFNULL(autotuneArgs.modelSize) << endl
+            << autotuneArgs.verbose << endl;
 
         stream << "= args" << endl;
 
@@ -349,7 +351,8 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArg
             << args.autotuneMetric << endl
             << args.autotunePredictions << endl
             << args.autotuneDuration << endl
-            << args.autotuneModelSize << endl;
+            << args.autotuneModelSize << endl
+            << args.autotuneVerbose << endl;
 
         stream.close();
     }
@@ -358,10 +361,10 @@ FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArg
         if (args.hasAutotune())
         {
             Autotune autotune(fastText);
-            autotune.train(args);
+            autotune.train(args, autotuneCallback);
         }
         else
-            fastText->train(args);
+            fastText->train(args, trainCallback);
 
         if (!modelPath.empty())
             fastText->saveModel(modelPath);
@@ -713,6 +716,7 @@ fasttext::Args CreateArgs(TrainingArgs args, AutotuneArgs autotuneArgs, const ch
     result.autotuneMetric = autotuneArgs.metric == nullptr ? "f1" : autotuneArgs.metric;
     result.autotuneModelSize = autotuneArgs.modelSize == nullptr ? "" : autotuneArgs.modelSize;
     result.autotunePredictions = autotuneArgs.predictions;
+    result.autotuneVerbose = autotuneArgs.verbose;
 
     return result;
 }

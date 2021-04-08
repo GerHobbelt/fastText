@@ -78,6 +78,7 @@ struct AutotuneArgs
     int predictions;
     int duration;
     const char* modelSize;
+    int verbose;
 };
 #pragma pack(pop)
 
@@ -187,6 +188,10 @@ public:
     bool hasModel() {return model_ != nullptr;}
 };
 
+// Progress callbacks
+typedef void (__cdecl * TrainProgressCallback)(float progress, float loss, double wst, double lr, int64_t eta);
+typedef void (__cdecl * AutotuneProgressCallback)(double progress, int32_t trials, double bestScore, double eta);
+
 // Errors
 FT_API(void) GetLastErrorText(char** error);
 
@@ -213,7 +218,7 @@ FT_API(void) GetDefaultSupervisedArgs(TrainingArgs** args);
 FT_API(void) DestroyArgs(TrainingArgs* args);
 
 // FastText commands
-FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, AutotuneArgs autotuneArgs, const char* label, const char* pretrainedVectors, bool debug);
+FT_API(int) Train(void* hPtr, const char* input, const char* output, TrainingArgs trainArgs, AutotuneArgs autotuneArgs, TrainProgressCallback trainCallback, AutotuneProgressCallback autotuneCallback, const char* label, const char* pretrainedVectors, bool debug);
 FT_API(int) Quantize(void* hPtr, const char* output, TrainingArgs trainArgs, const char* label);
 FT_API(int) GetNN(void* hPtr, const char* input, char*** predictedNeighbors, float* predictedProbabilities, int n);
 FT_API(int) GetSentenceVector(void* hPtr, const char* input, float** vector);

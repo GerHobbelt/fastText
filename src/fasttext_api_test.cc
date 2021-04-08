@@ -11,6 +11,7 @@
 using std::cout;
 using std::endl;
 using std::string;
+using std::ofstream;
 
 TestMetrics* FindMetrics(TestMeter* meter, int label);
 bool file_exists(const char *filename);
@@ -19,7 +20,7 @@ bool vector_has_nonzero_elements(const float* vector, int size);
 TEST_CASE("Struct sizes are correct")
 {
     REQUIRE(sizeof(TrainingArgs) == 100);
-    REQUIRE(sizeof(AutotuneArgs) == 32);
+    REQUIRE(sizeof(AutotuneArgs) == 36);
     REQUIRE(sizeof(TestMetrics) == 48);
     REQUIRE(sizeof(TestMeter) == 40);
 }
@@ -50,7 +51,7 @@ TEST_CASE("Can handle errors")
 
     GetDefaultSupervisedArgs(&args);
 
-    int result = Train(hPtr, "not/a/valid.file", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
+    int result = Train(hPtr, "not/a/valid.file", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, nullptr, nullptr, false);
     REQUIRE(result == -1);
 
     char* buff;
@@ -74,7 +75,7 @@ TEST_CASE("Can train unsupervised model")
     TrainingArgs* args;
 
     GetDefaultArgs(&args);
-    int result = Train(hPtr, "tests/cooking/cooking.train.nolabels.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
+    int result = Train(hPtr, "tests/cooking/cooking.train.nolabels.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, nullptr, nullptr, false);
 
     REQUIRE(result == 0);
     REQUIRE(IsModelReady(hPtr));
@@ -88,6 +89,55 @@ TEST_CASE("Can train unsupervised model")
 
     std::remove("tests/models/test.bin");
     std::remove("tests/models/test.vec");
+}
+
+TEST_CASE("Can autotune quantized supervised model with callback")
+{
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.ftz");
+    std::remove("tests/models/test.vec");
+    std::remove("tests/models/callback.txt");
+    std::remove("_train.txt");
+
+    REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+    REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+    REQUIRE_FALSE(file_exists("tests/models/callback.txt"));
+    REQUIRE_FALSE(file_exists("_train.txt"));
+
+    auto hPtr = CreateFastText();
+    TrainingArgs* args;
+    AutotuneArgs tuneArgs;
+
+    tuneArgs.validationFile = "tests/cooking/cooking.valid.txt";
+    tuneArgs.duration = 30;
+    tuneArgs.modelSize = "10M";
+
+    AutotuneProgressCallback callback = [](double progress, int32_t trials, double bestScore, double eta) {
+      ofstream stream("tests/models/callback.txt", ofstream::out | ofstream::app);
+      stream << progress << ";" << trials << ";" << bestScore << ";" << eta << endl;
+      stream.close();
+    };
+
+    GetDefaultSupervisedArgs(&args);
+    int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, tuneArgs, nullptr, callback, nullptr, nullptr, true);
+
+    REQUIRE(result == 0);
+    REQUIRE(IsModelReady(hPtr));
+    REQUIRE(GetModelDimension(hPtr) == 100);
+
+    DestroyArgs(args);
+    DestroyFastText(hPtr);
+
+    REQUIRE(file_exists("tests/models/test.ftz"));
+    REQUIRE(file_exists("tests/models/test.vec"));
+    REQUIRE(file_exists("tests/models/callback.txt"));
+    REQUIRE(file_exists("_train.txt"));
+
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.ftz");
+    std::remove("tests/models/test.vec");
+    std::remove("tests/models/callback.txt");
+    std::remove("_train.txt");
 }
 
 TEST_CASE("Can autotune quantized supervised model")
@@ -106,11 +156,11 @@ TEST_CASE("Can autotune quantized supervised model")
     AutotuneArgs tuneArgs;
 
     tuneArgs.validationFile = "tests/cooking/cooking.valid.txt";
-    tuneArgs.duration = 60;
+    tuneArgs.duration = 30;
     tuneArgs.modelSize = "10M";
 
     GetDefaultSupervisedArgs(&args);
-    int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, tuneArgs, nullptr, nullptr, true);
+    int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, tuneArgs, nullptr, nullptr, nullptr, nullptr, true);
 
     REQUIRE(result == 0);
     REQUIRE(IsModelReady(hPtr));
@@ -143,7 +193,7 @@ TEST_CASE("Can train and quantize supervised model")
     TrainingArgs* args;
 
     GetDefaultSupervisedArgs(&args);
-    int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
+    int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, nullptr, nullptr, false);
 
     REQUIRE(result == 0);
     REQUIRE(IsModelReady(hPtr));
@@ -182,7 +232,7 @@ TEST_CASE("Can train supervised model without saving")
     TrainingArgs* args;
 
     GetDefaultSupervisedArgs(&args);
-    int result = Train(hPtr, "tests/cooking/cooking.train.txt", nullptr, *args, AutotuneArgs(), nullptr, nullptr, false);
+    int result = Train(hPtr, "tests/cooking/cooking.train.txt", nullptr, *args, AutotuneArgs(), nullptr, nullptr, nullptr, nullptr, false);
 
     REQUIRE(result == 0);
     REQUIRE(IsModelReady(hPtr));
@@ -199,6 +249,48 @@ TEST_CASE("Can train supervised model without saving")
     std::remove("tests/models/test.vec");
 }
 
+TEST_CASE("Can train supervised model with callback")
+{
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.ftz");
+    std::remove("tests/models/test.vec");
+    std::remove("tests/models/callback.txt");
+
+    REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+    REQUIRE_FALSE(file_exists("tests/models/test.ftz"));
+    REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+    REQUIRE_FALSE(file_exists("tests/models/callback.txt"));
+
+    auto hPtr = CreateFastText();
+    TrainingArgs* args;
+
+    int callCnt = 0;
+    TrainProgressCallback callback = [](float progress, float loss, double wst, double lr, int64_t eta) {
+      ofstream stream("tests/models/callback.txt", ofstream::out | ofstream::app);
+      stream << progress << ";" << loss << ";" << wst << ";" << lr << ";" << eta << endl;
+      stream.close();
+    };
+
+    GetDefaultSupervisedArgs(&args);
+    int result = Train(hPtr, "tests/cooking/cooking.train.txt", nullptr, *args, AutotuneArgs(), callback, nullptr, nullptr, nullptr, false);
+
+    REQUIRE(result == 0);
+    REQUIRE(IsModelReady(hPtr));
+    REQUIRE(GetModelDimension(hPtr) == 100);
+
+    REQUIRE_FALSE(file_exists("tests/models/test.bin"));
+    REQUIRE_FALSE(file_exists("tests/models/test.vec"));
+    REQUIRE(file_exists("tests/models/callback.txt"));
+
+    DestroyArgs(args);
+    DestroyFastText(hPtr);
+
+    std::remove("tests/models/test.bin");
+    std::remove("tests/models/test.ftz");
+    std::remove("tests/models/test.vec");
+    std::remove("tests/models/callback.txt");
+}
+
 TEST_CASE("Can load model")
 {
     std::remove("tests/models/test.bin");
@@ -212,7 +304,7 @@ TEST_CASE("Can load model")
     TrainingArgs* args;
 
     GetDefaultSupervisedArgs(&args);
-    int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
+    int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, nullptr, nullptr, false);
 
     REQUIRE(result == 0);
     REQUIRE(IsModelReady(hPtr));
@@ -250,7 +342,7 @@ TEST_CASE("Can perform operations on a model")
         TrainingArgs* args;
 
         GetDefaultSupervisedArgs(&args);
-        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, false);
+        int result = Train(hPtr, "tests/cooking/cooking.train.txt", "tests/models/test", *args, AutotuneArgs(), nullptr, nullptr, nullptr, nullptr, false);
 
         REQUIRE(result == 0);
         REQUIRE(IsModelReady(hPtr));

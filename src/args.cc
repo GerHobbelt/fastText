@@ -51,6 +51,7 @@ Args::Args() {
   autotunePredictions = 1;
   autotuneDuration = 60 * 5; // 5 minutes
   autotuneModelSize = "";
+  autotuneVerbose = 2;
 }
 
 std::string Args::lossToString(loss_name ln) const {
@@ -181,6 +182,7 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         label = std::string(args.at(ai + 1));
       } else if (args[ai] == "-verbose") {
         verbose = std::stoi(args.at(ai + 1));
+        autotuneVerbose = verbose;
       } else if (args[ai] == "-pretrainedVectors") {
         pretrainedVectors = std::string(args.at(ai + 1));
       } else if (args[ai] == "-saveOutput") {
