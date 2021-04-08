@@ -218,8 +218,8 @@ Autotune::Autotune(FastText* fastText)
       verbose_(0){}
 
 void Autotune::printInfo(double maxDuration) {
-  double progress = elapsed_ * 100 / maxDuration;
-  progress = std::min(progress, 100.0);
+  double progress = elapsed_ / maxDuration;
+  progress = std::min(progress, 1.0);
   int32_t eta = (int32_t)std::max(maxDuration - elapsed_, 0.0);
 
   if (this->verbose_ > 0)
@@ -227,7 +227,7 @@ void Autotune::printInfo(double maxDuration) {
       std::cerr << "\r";
       std::cerr << std::fixed;
       std::cerr << "Progress: ";
-      std::cerr << std::setprecision(1) << std::setw(5) << progress << "%";
+      std::cerr << std::setprecision(1) << std::setw(5) << progress * 100 << "%";
       std::cerr << " Trials: " << std::setw(4) << trials_;
       std::cerr << " Best score: " << std::setw(9) << std::setprecision(6);
       if (bestScore_ == kUnknownBestScore) {
