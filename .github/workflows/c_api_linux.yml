@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - uses: olegtarasov/get-tag@v2.1
-      - uses: olegtarasov/download-nuget@v1
+      - uses: nuget/setup-nuget@v1
       - name: Build
         run: |
           mkdir build
@@ -25,15 +25,15 @@ jobs:
           APITOKEN: ${{ secrets.NugetToken }}
         run: |
           cd nuget
-          mono $NUGET_EXE pack FastText.Native.Linux.nuspec -Version $GIT_TAG_NAME
-          mono $NUGET_EXE push FastText.Native.Linux*.nupkg  -Source https://api.nuget.org/v3/index.json -ApiKey $APITOKEN
+          nuget pack FastText.Native.Linux.nuspec -Version $GIT_TAG_NAME
+          nuget push FastText.Native.Linux*.nupkg  -Source https://api.nuget.org/v3/index.json -ApiKey $APITOKEN
 
   build_macos:
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v1
       - uses: olegtarasov/get-tag@v2
-      - uses: olegtarasov/download-nuget@v1
+      - uses: nuget/setup-nuget@v1
       - name: Build
         run: |
           mkdir build
@@ -47,15 +47,15 @@ jobs:
           APITOKEN: ${{ secrets.NugetToken }}
         run: |
           cd nuget
-          mono $NUGET_EXE pack FastText.Native.MacOs.nuspec -Version $GIT_TAG_NAME
-          mono $NUGET_EXE push FastText.Native.MacOs*.nupkg  -Source https://api.nuget.org/v3/index.json -ApiKey $APITOKEN
+          nuget pack FastText.Native.MacOs.nuspec -Version $GIT_TAG_NAME
+          nuget push FastText.Native.MacOs*.nupkg  -Source https://api.nuget.org/v3/index.json -ApiKey $APITOKEN
 
   build_windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
       - uses: olegtarasov/get-tag@v2
-      - uses: olegtarasov/download-nuget@v1
+      - uses: nuget/setup-nuget@v1
       - name: Build
         run: |
           mkdir build
