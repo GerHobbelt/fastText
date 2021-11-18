@@ -11,10 +11,10 @@
         <summary />
         <copyright></copyright>
         <contentFiles>
-            <files include="**/Resources/*.*" buildAction="EmbeddedResource" />
+            <files include="any/any/libfasttext.so" buildAction="None" copyToOutput="true" />
         </contentFiles>
     </metadata>
     <files>
-        <file src="..\build\libfasttext.so" target="contentFiles\any\any\Resources" />
+        <file src="..\build\libfasttext.so" target="contentFiles\any\any" />
     </files>
 </package>
