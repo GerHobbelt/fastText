@@ -42,7 +42,7 @@ Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in)
   load(in);
 }
 
-Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in, Language lang)
+Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in, std::shared_ptr<Language> lang)
     : args_(args),
       size_(0),
       nwords_(0),
@@ -438,14 +438,14 @@ std::string Dictionary::getLabel(int32_t lid) const {
   return words_[lid + nwords_].word;
 }
 
-bool Dictionary::checkValidWord(const std::string& word, Language lang) {
-  if(word.size() >= lang.max()){return false;}
-  if(!lang.isWord(word)){return false;}
-  if(lang.isDuplicate(word)){return false;}
-  if(lang.isProfanity(word)){return false;}
-  if(lang.isStopword(word)){return false;}
-  if(lang.isWeb(word)){return false;}
-  if(lang.isUUID(word)){return false;}
+bool Dictionary::checkValidWord(const std::string& word, std::shared_ptr<Language> lang) {
+  if(word.size() >= lang->max()){return false;}
+  if(!lang->isWord(word)){return false;}
+  if(lang->isDuplicate(word)){return false;}
+  if(lang->isProfanity(word)){return false;}
+  if(lang->isStopword(word)){return false;}
+  if(lang->isWeb(word)){return false;}
+  if(lang->isUUID(word)){return false;}
 
   return true;
 }
@@ -469,7 +469,7 @@ void Dictionary::save(std::ostream& out) const {
   }
 }
 
-void Dictionary::load(std::istream& in, Language lang) {
+void Dictionary::load(std::istream& in, std::shared_ptr<Language> lang) {
   words_.clear();
   in.read((char*)&size_, sizeof(int32_t));
   in.read((char*)&nwords_, sizeof(int32_t));
@@ -484,11 +484,11 @@ void Dictionary::load(std::istream& in, Language lang) {
     }
     in.read((char*)&e.count, sizeof(int64_t));
     in.read((char*)&e.type, sizeof(entry_type));
-    lang.addWord(e);
+    lang->addWord(e);
   }
-  for (int32_t i = 0; i < lang.words.size(); i++) {
-    if(checkValidWord(lang.words[i].word, lang)) {
-      words_.push_back(lang.words[i]);
+  for (int32_t i = 0; i < lang->words.size(); i++) {
+    if(checkValidWord(lang->words[i].word, lang)) {
+      words_.push_back(lang->words[i]);
     } else {
       size_--;
       nwords_--;

@@ -22,15 +22,15 @@
 
 namespace fasttext {
 
-typedef int32_t id_type;
-enum class entry_type : int8_t { word = 0, label = 1 };
+// typedef int32_t id_type;
+// enum class entry_type : int8_t { word = 0, label = 1 };
 
-struct entry {
-  std::string word;
-  int64_t count;
-  entry_type type;
-  std::vector<int32_t> subwords;
-};
+// struct entry {
+//   std::string word;
+//   int64_t count;
+//   entry_type type;
+//   std::vector<int32_t> subwords;
+// };
 
 class Dictionary {
  protected:
@@ -70,7 +70,7 @@ class Dictionary {
 
   explicit Dictionary(std::shared_ptr<Args>);
   explicit Dictionary(std::shared_ptr<Args>, std::istream&);
-  explicit Dictionary(std::shared_ptr<Args>, std::istream&, Language);
+  explicit Dictionary(std::shared_ptr<Args>, std::istream&, std::shared_ptr<Language>);
   int32_t nwords() const;
   int32_t nlabels() const;
   int64_t ntokens() const;
@@ -79,7 +79,7 @@ class Dictionary {
   entry_type getType(int32_t) const;
   entry_type getType(const std::string&) const;
   bool discard(int32_t, real) const;
-  bool checkValidWord(const std::string&, const Language);
+  bool checkValidWord(const std::string&, std::shared_ptr<Language>);
   std::string getWord(int32_t) const;
   const std::vector<int32_t>& getSubwords(int32_t) const;
   const std::vector<int32_t> getSubwords(const std::string&) const;
@@ -98,7 +98,7 @@ class Dictionary {
   std::string getLabel(int32_t) const;
   void save(std::ostream&) const;
   void load(std::istream&);
-  void load(std::istream&, Language);
+  void load(std::istream&, std::shared_ptr<Language>);
   std::vector<int64_t> getCounts(entry_type) const;
   int32_t getLine(std::istream&, std::vector<int32_t>&, std::vector<int32_t>&)
       const;

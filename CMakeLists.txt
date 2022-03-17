@@ -6,7 +6,7 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 2.8.12)
 project(fasttext)
 
 # The version number.
