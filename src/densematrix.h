@@ -51,6 +51,10 @@ class DenseMatrix : public Matrix {
   inline real& at(int64_t i, int64_t j) {
     return data_[i * n_ + j];
   };
+  inline void eraseRow(int64_t row) {
+    assert(row * n_ + n_ < data_.size());
+    data_.erase(data_.begin() + row * n_, data_.begin() + row * n_ + n_);
+  }
 
   inline int64_t rows() const {
     return m_;
@@ -68,6 +72,7 @@ class DenseMatrix : public Matrix {
   void l2NormRow(Vector& norms) const;
 
   real dotRow(const Vector&, int64_t) const override;
+  void filterRows(const std::vector<int64_t>) override;
   void addVectorToRow(const Vector&, int64_t, real) override;
   void addRowToVector(Vector& x, int32_t i) const override;
   void addRowToVector(Vector& x, int32_t i, real a) const override;

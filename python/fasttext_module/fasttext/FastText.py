@@ -88,10 +88,13 @@ class _FastText(object):
     strings are then encoded as UTF-8 and fed to the fastText C++ API.
     """
 
-    def __init__(self, model_path=None, args=None):
+    def __init__(self, model_path=None, args=None, *, clean=False, lang=None):
         self.f = fasttext.fasttext()
         if model_path is not None:
-            self.f.loadModel(model_path)
+            if clean and lang:
+                self.f.loadModelClean(model_path, lang)
+            else:
+                self.f.loadModel(model_path)
         self._words = None
         self._labels = None
         self.set_args(args)
@@ -431,9 +434,9 @@ def tokenize(text):
     return f.tokenize(text)
 
 
-def load_model(path):
+def load_model(path, clean=False, lang=None):
     """Load a model given a filepath and return a model object."""
-    return _FastText(model_path=path)
+    return _FastText(model_path=path, clean=clean, lang=lang)
 
 
 unsupervised_default = {

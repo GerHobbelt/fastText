@@ -6,7 +6,7 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-cmake_minimum_required(VERSION 2.8.9)
+cmake_minimum_required(VERSION 3.20.0)
 project(fasttext)
 
 # The version number.
@@ -31,7 +31,8 @@ set(HEADER_FILES
     src/quantmatrix.h
     src/real.h
     src/utils.h
-    src/vector.h)
+    src/vector.h
+    src/language.h)
 
 set(SOURCE_FILES
     src/args.cc
@@ -47,7 +48,8 @@ set(SOURCE_FILES
     src/productquantizer.cc
     src/quantmatrix.cc
     src/utils.cc
-    src/vector.cc)
+    src/vector.cc
+    src/language.cc)
 
 
 if (NOT MSVC)

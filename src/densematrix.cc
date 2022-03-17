@@ -87,6 +87,12 @@ void DenseMatrix::divideRow(const Vector& denoms, int64_t ib, int64_t ie) {
   }
 }
 
+void DenseMatrix::filterRows(const std::vector<int64_t> rows) {
+  for(int64_t i = 0; i < rows.size(); i++) {
+    eraseRow(rows[i]);
+  }
+}
+
 real DenseMatrix::l2NormRow(int64_t i) const {
   auto norm = 0.0;
   for (auto j = 0; j < n_; j++) {

@@ -8,7 +8,7 @@
 
 CXX = c++
 CXXFLAGS = -pthread -std=c++11 -march=native
-OBJS = args.o autotune.o matrix.o dictionary.o loss.o productquantizer.o densematrix.o quantmatrix.o vector.o model.o utils.o meter.o fasttext.o
+OBJS = args.o autotune.o matrix.o dictionary.o language.o loss.o productquantizer.o densematrix.o quantmatrix.o vector.o model.o utils.o meter.o fasttext.o
 INCLUDES = -I.
 
 opt: CXXFLAGS += -O3 -funroll-loops -DNDEBUG
@@ -35,8 +35,11 @@ autotune.o: src/autotune.cc src/autotune.h
 matrix.o: src/matrix.cc src/matrix.h
 	$(CXX) $(CXXFLAGS) -c src/matrix.cc
 
-dictionary.o: src/dictionary.cc src/dictionary.h src/args.h
+dictionary.o: src/dictionary.cc src/dictionary.h src/args.h src/language.h
 	$(CXX) $(CXXFLAGS) -c src/dictionary.cc
+
+language.o: src/language.cc src/language.h
+	$(CXX) $(CXXFLAGS) -c src/language.cc
 
 loss.o: src/loss.cc src/loss.h src/matrix.h src/real.h
 	$(CXX) $(CXXFLAGS) -c src/loss.cc
@@ -89,8 +92,11 @@ autotune.bc: src/autotune.cc src/autotune.h
 matrix.bc: src/matrix.cc src/matrix.h
 	$(EMCXX) $(EMCXXFLAGS) src/matrix.cc -o matrix.bc
 
-dictionary.bc: src/dictionary.cc src/dictionary.h src/args.h
+dictionary.bc: src/dictionary.cc src/dictionary.h src/args.h src/language.h
 	$(EMCXX) $(EMCXXFLAGS)  src/dictionary.cc -o dictionary.bc
+
+language.bc: src/language.cc src/language.h
+	$(EMCXX) $(EMCXXFLAGS)  src/language.cc -o language.bc
 
 loss.bc: src/loss.cc src/loss.h src/matrix.h src/real.h
 	$(EMCXX) $(EMCXXFLAGS) src/loss.cc -o loss.bc

@@ -222,6 +222,18 @@ void FastText::loadModel(const std::string& filename) {
   ifs.close();
 }
 
+void FastText::loadModelClean(const std::string& filename, const std::string& lang) {
+  std::ifstream ifs(filename, std::ifstream::binary);
+  if (!ifs.is_open()) {
+    throw std::invalid_argument(filename + " cannot be opened for loading!");
+  }
+  if (!checkModel(ifs)) {
+    throw std::invalid_argument(filename + " has wrong file format!");
+  }
+  loadModel(ifs, lang);
+  ifs.close();
+}
+
 std::vector<int64_t> FastText::getTargetCounts() const {
   if (args_->model == model_name::sup) {
     return dict_->getCounts(entry_type::label);
@@ -254,6 +266,45 @@ void FastText::loadModel(std::istream& in) {
     input_ = std::make_shared<QuantMatrix>();
   }
   input_->load(in);
+
+  if (!quant_input && dict_->isPruned()) {
+    throw std::invalid_argument(
+        "Invalid model file.\n"
+        "Please download the updated model from www.fasttext.cc.\n"
+        "See issue #332 on Github for more information.\n");
+  }
+
+  in.read((char*)&args_->qout, sizeof(bool));
+  if (quant_ && args_->qout) {
+    output_ = std::make_shared<QuantMatrix>();
+  }
+  output_->load(in);
+
+  buildModel();
+}
+
+void FastText::loadModel(std::istream& in, const std::string& lang) {
+  args_ = std::make_shared<Args>();
+  input_ = std::make_shared<DenseMatrix>();
+  output_ = std::make_shared<DenseMatrix>();
+  args_->load(in);
+  if (version == 11 && args_->model == model_name::sup) {
+    // backward compatibility: old supervised models do not use char ngrams.
+    args_->maxn = 0;
+  }
+  lang_ = std::make_shared<Language>(lang);
+  dict_ = std::make_shared<Dictionary>(args_, in, lang_);
+
+  bool quant_input;
+  in.read((char*)&quant_input, sizeof(bool));
+  if (quant_input) {
+    quant_ = true;
+    input_ = std::make_shared<QuantMatrix>();
+  }
+  input_->load(in);
+  if (!quant_input) {
+    input_->filterRows(dict_->getInvalidWords());
+  }
 
   if (!quant_input && dict_->isPruned()) {
     throw std::invalid_argument(

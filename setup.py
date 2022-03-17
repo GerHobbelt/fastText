@@ -23,6 +23,7 @@ import io
 
 __version__ = '0.9.2'
 FASTTEXT_SRC = "src"
+BOOST_HEADERS = "/usr/include/boost"
 
 # Based on https://github.com/pybind/python_example
 
@@ -73,6 +74,7 @@ ext_modules = [
             get_pybind_include(user=True),
             # Path to fasttext source code
             FASTTEXT_SRC,
+            BOOST_HEADERS
         ],
         language='c++',
         extra_compile_args=["-O0 -fno-inline -fprofile-arcs -pthread -march=native" if coverage else

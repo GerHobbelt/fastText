@@ -22,6 +22,7 @@
 #include "args.h"
 #include "densematrix.h"
 #include "dictionary.h"
+#include "language.h"
 #include "matrix.h"
 #include "meter.h"
 #include "model.h"
@@ -39,6 +40,7 @@ class FastText {
  protected:
   std::shared_ptr<Args> args_;
   std::shared_ptr<Dictionary> dict_;
+  std::shared_ptr<Language> lang_;
   std::shared_ptr<Matrix> input_;
   std::shared_ptr<Matrix> output_;
   std::shared_ptr<Model> model_;
@@ -118,7 +120,11 @@ class FastText {
 
   void loadModel(std::istream& in);
 
+  void loadModel(std::istream& in, const std::string& lang);
+
   void loadModel(const std::string& filename);
+
+  void loadModelClean(const std::string& filename, const std::string& lang);
 
   void getSentenceVector(std::istream& in, Vector& vec);
 

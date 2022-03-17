@@ -42,6 +42,16 @@ Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in)
   load(in);
 }
 
+Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in, Language lang)
+    : args_(args),
+      size_(0),
+      nwords_(0),
+      nlabels_(0),
+      ntokens_(0),
+      pruneidx_size_(-1) {
+  load(in, lang);
+}
+
 int32_t Dictionary::find(const std::string& w) const {
   return find(w, hash(w));
 }
@@ -428,6 +438,18 @@ std::string Dictionary::getLabel(int32_t lid) const {
   return words_[lid + nwords_].word;
 }
 
+bool Dictionary::checkValidWord(const std::string& word, Language lang) {
+  if(word.size() >= lang.max()){return false;}
+  if(!lang.isWord(word)){return false;}
+  if(lang.isDuplicate(word)){return false;}
+  if(lang.isProfanity(word)){return false;}
+  if(lang.isStopword(word)){return false;}
+  if(lang.isWeb(word)){return false;}
+  if(lang.isUUID(word)){return false;}
+
+  return true;
+}
+
 void Dictionary::save(std::ostream& out) const {
   out.write((char*)&size_, sizeof(int32_t));
   out.write((char*)&nwords_, sizeof(int32_t));
@@ -444,6 +466,50 @@ void Dictionary::save(std::ostream& out) const {
   for (const auto pair : pruneidx_) {
     out.write((char*)&(pair.first), sizeof(int32_t));
     out.write((char*)&(pair.second), sizeof(int32_t));
+  }
+}
+
+void Dictionary::load(std::istream& in, Language lang) {
+  words_.clear();
+  in.read((char*)&size_, sizeof(int32_t));
+  in.read((char*)&nwords_, sizeof(int32_t));
+  in.read((char*)&nlabels_, sizeof(int32_t));
+  in.read((char*)&ntokens_, sizeof(int64_t));
+  in.read((char*)&pruneidx_size_, sizeof(int64_t));
+  for (int32_t i = 0; i < size_; i++) {
+    char c;
+    entry e;
+    while ((c = in.get()) != 0) {
+      e.word.push_back(c);
+    }
+    in.read((char*)&e.count, sizeof(int64_t));
+    in.read((char*)&e.type, sizeof(entry_type));
+    lang.addWord(e);
+  }
+  for (int32_t i = 0; i < lang.words.size(); i++) {
+    if(checkValidWord(lang.words[i].word, lang)) {
+      words_.push_back(lang.words[i]);
+    } else {
+      size_--;
+      nwords_--;
+      invalid_.push_back(i);
+    }
+  }
+  pruneidx_.clear();
+  for (int32_t i = 0; i < pruneidx_size_; i++) {
+    int32_t first;
+    int32_t second;
+    in.read((char*)&first, sizeof(int32_t));
+    in.read((char*)&second, sizeof(int32_t));
+    pruneidx_[first] = second;
+  }
+  initTableDiscard();
+  initNgrams();
+
+  int32_t word2intsize = std::ceil(size_ / 0.7);
+  word2int_.assign(word2intsize, -1);
+  for (int32_t i = 0; i < size_; i++) {
+    word2int_[find(words_[i].word)] = i;
   }
 }
 
