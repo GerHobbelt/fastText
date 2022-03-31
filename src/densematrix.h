@@ -8,8 +8,10 @@
 
 #pragma once
 
+#include <algorithm>
 #include <assert.h>
 #include <cstdint>
+#include <iostream>
 #include <istream>
 #include <ostream>
 #include <stdexcept>
@@ -54,6 +56,32 @@ class DenseMatrix : public Matrix {
   inline void eraseRow(int64_t row) {
     assert(row * n_ + n_ < data_.size());
     data_.erase(data_.begin() + row * n_, data_.begin() + row * n_ + n_);
+  }
+  inline void eraseRows(std::vector<int64_t> rows) {
+    size_t rm_index = 0;
+    int64_t count = 0;
+    int64_t deleted = 0;
+    data_.erase(
+      std::remove_if(std::begin(data_), std::end(data_), [&](real& elem)
+      {
+          if (rm_index < rows.size() && int((&elem - &data_[0]) / n_) == rows[rm_index])
+          {
+            count++;
+            if(count == n_) {
+              rm_index++;
+              count = 0;
+              deleted++;
+            }
+            if(rm_index % 10000 == 0) {
+              std::cerr << "\rRemoved " << rm_index << " rows..." << std::flush;
+            }
+            return true;
+          }
+          return false;
+      }),
+      std::end(data_)
+    );
+    m_ = m_ - deleted;
   }
 
   inline int64_t rows() const {

@@ -21,7 +21,7 @@ import subprocess
 import platform
 import io
 
-__version__ = '0.9.2'
+__version__ = '0.9.4'
 FASTTEXT_SRC = "src"
 BOOST_HEADERS = "/usr/include/boost"
 
@@ -74,6 +74,7 @@ ext_modules = [
             get_pybind_include(user=True),
             # Path to fasttext source code
             FASTTEXT_SRC,
+            # Path to boost library headers
             BOOST_HEADERS
         ],
         language='c++',

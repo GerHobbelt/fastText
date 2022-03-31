@@ -20,7 +20,10 @@ namespace fasttext {
         assert(LONGEST_WORDS.find(language) != LONGEST_WORDS.end());
         lang_.MAXLEN = LONGEST_WORDS[language];
         lang_.PROFANITY = load(std::getenv("PROFANITY_PATH") + language + ".txt");
+        std::cerr << "Loaded " << lang_.PROFANITY.size() << " profanity words" << std::endl;
         lang_.STOPWORDS = load(std::getenv("STOPWORDS_PATH") + language + ".txt");
+        std::cerr << "Loaded " << lang_.STOPWORDS.size() << " stopwords" << std::endl;
+        std::cerr << "Loaded language " << language << " with MAXLEN " << unsigned(lang_.MAXLEN) << std::endl;
     }
 
     std::unordered_set<std::string> Language::load(const std::string& filename) {
@@ -34,6 +37,7 @@ namespace fasttext {
         } else {
             throw std::invalid_argument("Cannot load " + filename + "!");
         }
+        ifs.close();
         return set;
     }
 
@@ -72,23 +76,25 @@ namespace fasttext {
         for (uint8_t i = 0; i < PUNCT.size(); i++) {
             word.erase(std::remove(word.begin(), word.end(), *PUNCT[i]), word.end());
         }
-        if (STRICT_PUNCT.find(std::string(1, word.front())) != STRICT_PUNCT.end()) {
-            word.erase(word.begin());
+        if (word.size() > 0 && STRICT_PUNCT.find(std::string(1, word.front())) != STRICT_PUNCT.end()) {
+            word.erase(0, 1);
         }
-        if (STRICT_PUNCT.find(std::string(1, word.back())) != STRICT_PUNCT.end()) {
-            word.erase(word.end());
+        if (word.size() > 0 && STRICT_PUNCT.find(std::string(1, word.back())) != STRICT_PUNCT.end()) {
+            word.erase(word.size() - 1);
         }
+        if (word.empty()) return true;
+        if (isProfanity(word)) {
+            std::cerr << word << " is profanity!" << std::endl;
+            return true;
+        }
+        if (isStopword(word)) return true;
         if (word == original) return false;
         if (dict_.find(word) != dict_.end()) return true;
         return false;
     }
 
     bool Language::isWeb(const std::string word) {
-        if (std::regex_match(word, std::regex("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?"))) {
-            return true;
-        } else {
-            return false;
-        }
+        return std::regex_match(word, std::regex("^(https?:\/\/)?([\da-z-]+\\.)+([a-z\\.]{2,6})([\/\w \\.-]*)*\/?$"));
     }
 
     bool Language::isUUID(const std::string word) {

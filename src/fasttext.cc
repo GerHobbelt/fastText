@@ -302,9 +302,11 @@ void FastText::loadModel(std::istream& in, const std::string& lang) {
     input_ = std::make_shared<QuantMatrix>();
   }
   input_->load(in);
+  std::cerr << "Input matrix loaded!" << std::endl;
   if (!quant_input) {
     input_->filterRows(dict_->getInvalidWords());
   }
+  std::cerr << "Rows filtered!" << std::endl;
 
   if (!quant_input && dict_->isPruned()) {
     throw std::invalid_argument(

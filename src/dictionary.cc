@@ -440,12 +440,14 @@ std::string Dictionary::getLabel(int32_t lid) const {
 
 bool Dictionary::checkValidWord(const std::string& word, std::shared_ptr<Language> lang) {
   if(word.size() >= lang->max()){return false;}
-  if(!lang->isWord(word)){return false;}
-  if(lang->isDuplicate(word)){return false;}
-  if(lang->isProfanity(word)){return false;}
-  if(lang->isStopword(word)){return false;}
-  if(lang->isWeb(word)){return false;}
-  if(lang->isUUID(word)){return false;}
+  if(!lang->isWord(word)){
+    return false;}
+  if(lang->isDuplicate(word)) return false; // Also checks for profanity and stopwords
+  if(lang->isWeb(word)) return false;
+  if(lang->isUUID(word)){
+    std::cerr << word << " is a UUID!" << std::endl;
+    return false;
+  }
 
   return true;
 }
@@ -486,6 +488,9 @@ void Dictionary::load(std::istream& in, std::shared_ptr<Language> lang) {
     in.read((char*)&e.type, sizeof(entry_type));
     lang->addWord(e);
   }
+  std::cerr << "Read " << size_ << " words." << std::endl;
+  std::cerr << "Size: " << size_ << std::endl;
+  std::cerr << "NWords: " << nwords_ << std::endl;
   for (int32_t i = 0; i < lang->words.size(); i++) {
     if(checkValidWord(lang->words[i].word, lang)) {
       words_.push_back(lang->words[i]);
@@ -494,7 +499,11 @@ void Dictionary::load(std::istream& in, std::shared_ptr<Language> lang) {
       nwords_--;
       invalid_.push_back(i);
     }
+    if (i % 100000 == 0) {
+      std::cerr << "Parsed " << i << " words" << std::endl;
+    }
   }
+  std::cerr << "\nKept " << size_ << " valid words." << std::endl;
   pruneidx_.clear();
   for (int32_t i = 0; i < pruneidx_size_; i++) {
     int32_t first;
@@ -511,6 +520,7 @@ void Dictionary::load(std::istream& in, std::shared_ptr<Language> lang) {
   for (int32_t i = 0; i < size_; i++) {
     word2int_[find(words_[i].word)] = i;
   }
+  std::cerr << "Dictionary loaded!" << std::endl;
 }
 
 void Dictionary::load(std::istream& in) {

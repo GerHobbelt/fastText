@@ -37,7 +37,7 @@ struct lang {
 
 class Language {
 
-    std::unordered_map<std::string, uint8_t> LONGEST_WORDS = {{"en", 28}, {"it", 26}, {"de", 32}, {"fr", 25}, {"es", 23}, {"pt", 29}};
+    std::unordered_map<std::string, uint8_t> LONGEST_WORDS = {{"en", 24}, {"it", 24}, {"de", 32}, {"fr", 24}, {"es", 23}, {"pt", 24}};
     // STRICT_PUNCT is forbidden at the beginning and end of the word
     const std::unordered_set<std::string> STRICT_PUNCT{"&", "-"};
     // PUNCT is forbidden anywhere inside the word
