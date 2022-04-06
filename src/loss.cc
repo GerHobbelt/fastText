@@ -14,7 +14,7 @@
 namespace fasttext {
 
 constexpr int64_t SIGMOID_TABLE_SIZE = 512;
-constexpr int64_t MAX_SIGMOID = 8;
+constexpr int64_t MAX_SIGMOID = 50;
 constexpr int64_t LOG_TABLE_SIZE = 512;
 
 bool comparePairs(
