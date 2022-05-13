@@ -64,15 +64,7 @@ namespace fasttext {
     bool Language::isDuplicate(std::string word) {
         std::string original = word;
         std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){return std::tolower(c);});
-        // Check that splitting the words on full stops doesn't return already known tokens
-        // VERY EXPENSIVE! Not implemented yet.
-        // std::string delimiter = ".";
-        // size_t pos = 0;
-        // std::string token;
-        // while ((pos = word.find(delimiter)) != std::string::npos) {
-        //     token = word.substr(0, pos);
-        //     word.erase(0, pos + delimiter.length());
-        // }
+        std::string s = word;
         for (uint8_t i = 0; i < PUNCT.size(); i++) {
             word.erase(std::remove(word.begin(), word.end(), *PUNCT[i]), word.end());
         }
@@ -84,12 +76,31 @@ namespace fasttext {
         }
         if (word.empty()) return true;
         if (isProfanity(word)) {
-            std::cerr << word << " is profanity!" << std::endl;
             return true;
         }
         if (isStopword(word)) return true;
         if (word == original) return false;
         if (dict_.find(word) != dict_.end()) return true;
+        // Check that splitting the words on full stops doesn't return a set of already known tokens
+        // Very expensive but worth the effort.
+        std::string delimiter = ".";
+        size_t pos = 0;
+        std::string token;
+        bool flag = true;
+        int its = 0;
+        while ((pos = s.find(delimiter)) != std::string::npos) {
+            its++;
+            token = s.substr(0, pos);
+            if (!token.empty() && dict_.find(token) == dict_.end() && !isStopword(token) && !isProfanity(token) && isWord(token)) {
+                flag = false;
+                break;
+            }
+            s.erase(0, pos + delimiter.length());
+        }
+        if(flag and its > 0) {
+            // std::cerr << original << " is a composition of already known words!" << std::endl;
+            return true;
+        }
         return false;
     }
 

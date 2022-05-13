@@ -37,20 +37,10 @@ while (<>) {
     s/\]//g;
     s/&[^;]*;/ /g;          # remove URL encoded chars
 
-    # convert to lowercase letters and spaces, spell digits
+    # convert to lowercase letters and spaces
     $_=" $_ ";
-    tr/A-Z/a-z/;
-    s/0/ zero /g;
-    s/1/ one /g;
-    s/2/ two /g;
-    s/3/ three /g;
-    s/4/ four /g;
-    s/5/ five /g;
-    s/6/ six /g;
-    s/7/ seven /g;
-    s/8/ eight /g;
-    s/9/ nine /g;
-    tr/a-z/ /cs;
+    tr/A-ZÀÒÙÌÉÈÄÇËÑÖÜÂÊÛ/a-zàòùìéèäçëñöüâêû/;
+    tr/a-zàòùìéèäçëñöüâêû+-=&*$€£%@!—()[]{}|\#/ /cs;
     chop;
     print $_;
   }
