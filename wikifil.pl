@@ -8,6 +8,9 @@
 
 # Written by Matt Mahoney, June 10, 2006.  This program is released to the public domain.
 
+use utf8;
+use open qw(:std :utf8);
+binmode(STDOUT, ":utf8");
 $/=">";                     # input record separator
 while (<>) {
   if (/<text /) {$text=1;}  # remove all but between <text> ... </text>
@@ -37,20 +40,10 @@ while (<>) {
     s/\]//g;
     s/&[^;]*;/ /g;          # remove URL encoded chars
 
-    # convert to lowercase letters and spaces, spell digits
+    # convert to lowercase letters and spaces
     $_=" $_ ";
-    tr/A-Z/a-z/;
-    s/0/ zero /g;
-    s/1/ one /g;
-    s/2/ two /g;
-    s/3/ three /g;
-    s/4/ four /g;
-    s/5/ five /g;
-    s/6/ six /g;
-    s/7/ seven /g;
-    s/8/ eight /g;
-    s/9/ nine /g;
-    tr/a-z/ /cs;
+    tr/A-ZÀÒÙÌÉÈÄÇËÑÖÜÂÊÛ/a-zàòùìéèäçëñöüâêû/;
+    tr/a-zàòùìéèäçëñöüâêû\+\-\&\*$€£\%@\!\#/ /cs;
     chop;
     print $_;
   }
