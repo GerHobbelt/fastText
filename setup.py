@@ -23,7 +23,7 @@ import io
 
 __version__ = '0.9.4'
 FASTTEXT_SRC = "src"
-BOOST_HEADERS = "/usr/include/boost"
+BOOST_HEADERS = "boost"
 
 # Based on https://github.com/pybind/python_example
 
