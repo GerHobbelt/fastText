@@ -227,6 +227,28 @@ class _FastText(object):
 
             return labels, np.array(probs, copy=False)
 
+    def predictWords(self, text, k=1, threshold=0.0, on_unicode_error='strict'):
+        """
+        Export used words
+        """
+
+        def check(entry):
+            if entry.find('\n') != -1:
+                raise ValueError(
+                    "predict processes one line at a time (remove \'\\n\')"
+                )
+            entry += "\n"
+            return entry
+
+        text = check(text)
+        predictions, words = self.f.predictWords(text, k, threshold, on_unicode_error)
+        if predictions:
+            probs, labels = zip(*predictions)
+        else:
+            probs, labels = ([], ())
+
+        return labels, np.array(probs, copy=False), words
+
     def get_input_matrix(self):
         """
         Get a reference to the full input matrix of a Model. This only

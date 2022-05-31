@@ -29,6 +29,8 @@ void printUsage() {
       << "  predict                 predict most likely labels\n"
       << "  predict-prob            predict most likely labels with "
          "probabilities\n"
+	  << "  predict-prob-words      predict most likely labels with "
+		 "probabilities and also outputs input words\n"
       << "  skipgram                train a skipgram model\n"
       << "  cbow                    train a cbow model\n"
       << "  print-word-vectors      print word vectors given a trained model\n"
@@ -186,6 +188,42 @@ void test(const std::vector<std::string>& args) {
   exit(0);
 }
 
+void printPredictionsWords(
+		const std::vector<std::pair<real, std::string>>& predictions,
+		const std::vector<std::string>& words,
+		bool multiline) {
+	bool first = true;
+	for (const auto& prediction : predictions) {
+		if (!first && !multiline) {
+			std::cout << " ";
+		}
+		first = false;
+		std::cout << prediction.second;
+		std::cout << " " << prediction.first;
+		if (multiline) {
+			std::cout << std::endl;
+		}
+	}
+	if (!multiline) {
+		std::cout << std::endl;
+	}
+
+	first = true;
+	for (auto&& word : words) {
+		if (!first && !multiline) {
+			std::cout << " ";
+		}
+		first = false;
+		std::cout << word;
+		if (multiline) {
+			std::cout << std::endl;
+		}
+	}
+	if (!multiline) {
+		std::cout << std::endl;
+	}
+}
+
 void printPredictions(
     const std::vector<std::pair<real, std::string>>& predictions,
     bool printProb,
@@ -224,6 +262,12 @@ void predict(const std::vector<std::string>& args) {
   }
 
   bool printProb = args[1] == "predict-prob";
+
+  bool printWords = args[1] == "predict-prob-words";
+  if (printWords) {
+	  printProb = true;
+  }
+
   FastText fasttext;
   fasttext.loadModel(std::string(args[2]));
 
@@ -239,8 +283,17 @@ void predict(const std::vector<std::string>& args) {
   }
   std::istream& in = inputIsStdIn ? std::cin : ifs;
   std::vector<std::pair<real, std::string>> predictions;
-  while (fasttext.predictLine(in, predictions, k, threshold)) {
-    printPredictions(predictions, printProb, false);
+  if (printWords) {
+    std::vector<std::string> words;
+	while (fasttext.predictLineWords(in, predictions, k, threshold, words)) {
+	  printPredictionsWords(predictions, words, false);
+	  words.clear();
+	}
+  }
+  else {
+	while (fasttext.predictLine(in, predictions, k, threshold)) {
+	  printPredictions(predictions, printProb, false);
+    }
   }
   if (ifs.is_open()) {
     ifs.close();
@@ -442,7 +495,7 @@ int main(int argc, char** argv) {
     nn(args);
   } else if (command == "analogies") {
     analogies(args);
-  } else if (command == "predict" || command == "predict-prob") {
+  } else if (command == "predict" || command == "predict-prob" || command == "predict-prob-words") {
     predict(args);
   } else if (command == "dump") {
     dump(args);
