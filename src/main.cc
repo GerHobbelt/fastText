@@ -285,9 +285,11 @@ void predict(const std::vector<std::string>& args) {
   std::vector<std::pair<real, std::string>> predictions;
   if (printWords) {
     std::vector<std::string> words;
-	while (fasttext.predictLineWords(in, predictions, k, threshold, words)) {
+    std::vector<std::string> tokens;
+	while (fasttext.predictLineWords(in, predictions, k, threshold, words, tokens)) {
 	  printPredictionsWords(predictions, words, false);
 	  words.clear();
+	  tokens.clear();
 	}
   }
   else {

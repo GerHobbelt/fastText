@@ -241,13 +241,13 @@ class _FastText(object):
             return entry
 
         text = check(text)
-        predictions, words = self.f.predictWords(text, k, threshold, on_unicode_error)
+        predictions, words, tokens = self.f.predictWords(text, k, threshold, on_unicode_error)
         if predictions:
             probs, labels = zip(*predictions)
         else:
             probs, labels = ([], ())
 
-        return labels, np.array(probs, copy=False), words
+        return labels, np.array(probs, copy=False), words, tokens
 
     def get_input_matrix(self):
         """

@@ -470,14 +470,15 @@ bool FastText::predictLineWords(
 		std::vector<std::pair<real, std::string>>& predictions,
 		int32_t k,
 		real threshold,
-		std::vector<std::string>& wordsStrings) const {
+		std::vector<std::string>& wordsStrings,
+		std::vector<std::string>& tokens) const {
 	predictions.clear();
 	if (in.peek() == EOF) {
 		return false;
 	}
 
 	std::vector<int32_t> words, labels;
-	dict_->getLine(in, words, labels);
+	dict_->getLineTokens(in, words, labels, tokens);
 
 	for (auto&& wid : words) {
 		wordsStrings.push_back(dict_->getWord(wid));

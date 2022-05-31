@@ -429,11 +429,13 @@ PYBIND11_MODULE(fasttext_pybind, m) {
 		std::stringstream ioss(text);
 		std::vector<std::pair<fasttext::real, std::string>> predictions;
 		std::vector<std::string> words;
-		m.predictLineWords(ioss, predictions, k, threshold, words);
+		std::vector<std::string> tokens;
+		m.predictLineWords(ioss, predictions, k, threshold, words, tokens);
 
-		return make_pair(
-				castToPythonString(predictions, onUnicodeError),
-				castToPythonString(words, onUnicodeError)
+		return std::tuple<std::vector<std::pair<fasttext::real, py::str>>, std::vector<py::str>, std::vector<py::str>>(
+			castToPythonString(predictions, onUnicodeError),
+			castToPythonString(words, onUnicodeError),
+			castToPythonString(tokens, onUnicodeError)
 		);
 	  })
       .def(

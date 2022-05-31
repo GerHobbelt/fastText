@@ -146,7 +146,8 @@ class FastText {
       std::vector<std::pair<real, std::string>>& predictions,
       int32_t k,
       real threshold,
-	  std::vector<std::string>& words) const;
+	  std::vector<std::string>& words,
+	  std::vector<std::string>& tokens) const;
 
   std::vector<std::pair<std::string, Vector>> getNgramVectors(
       const std::string& word) const;
