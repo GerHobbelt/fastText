@@ -359,13 +359,17 @@ class _FastText(object):
             qnorm
         )
 
-    def set_matrices(self, input_matrix, output_matrix):
+    def set_matrices(self, input_matrix, output_matrix, short_float=False):
         """
         Set input and output matrices. This function assumes you know what you
         are doing.
         """
-        self.f.setMatrices(input_matrix.astype(np.float32),
-                           output_matrix.astype(np.float32))
+        if short_float:
+            self.f.setMatrices(input_matrix.astype(np.float16),
+                               output_matrix.astype(np.float16))
+        else:
+            self.f.setMatrices(input_matrix.astype(np.float32),
+                               output_matrix.astype(np.float32))
 
     @property
     def words(self):
