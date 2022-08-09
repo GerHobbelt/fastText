@@ -472,12 +472,19 @@ void Dictionary::save(std::ostream& out) const {
 }
 
 void Dictionary::load(std::istream& in, std::shared_ptr<Language> lang) {
+  std::cerr << "Starting dictionary initialization..." << std::endl;
   words_.clear();
   in.read((char*)&size_, sizeof(int32_t));
   in.read((char*)&nwords_, sizeof(int32_t));
   in.read((char*)&nlabels_, sizeof(int32_t));
   in.read((char*)&ntokens_, sizeof(int64_t));
   in.read((char*)&pruneidx_size_, sizeof(int64_t));
+  // std::cerr << "-------------------" << std::endl;
+  // std::cerr << "READ PARAMETERS" << std::endl;
+  // std::cerr << "Size: " << size_ << std::endl;
+  // std::cerr << "Nwords: " << nwords_ << std::endl;
+  // std::cerr << "Nlabels:" << nlabels_ << std::endl;
+  // std::cerr << "Ntokens:" << ntokens_ << std::endl;
   for (int32_t i = 0; i < size_; i++) {
     char c;
     entry e;

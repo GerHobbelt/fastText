@@ -287,14 +287,16 @@ void FastText::loadModel(std::istream& in, const std::string& lang) {
   args_ = std::make_shared<Args>();
   input_ = std::make_shared<DenseMatrix>();
   output_ = std::make_shared<DenseMatrix>();
+  std::cerr << "Loading model..." << std::endl;
   args_->load(in);
   if (version == 11 && args_->model == model_name::sup) {
     // backward compatibility: old supervised models do not use char ngrams.
     args_->maxn = 0;
   }
+  std::cerr << "Arguments loaded!" << std::endl;
   lang_ = std::make_shared<Language>(lang);
   dict_ = std::make_shared<Dictionary>(args_, in, lang_);
-
+  std::cerr << "Data structures initialized!" << std::endl;
   bool quant_input;
   in.read((char*)&quant_input, sizeof(bool));
   if (quant_input) {
