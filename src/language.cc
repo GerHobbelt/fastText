@@ -9,7 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <string.h>
-#include <regex.h>
+#include <regex>
 
 namespace fasttext {
 
@@ -109,7 +109,7 @@ namespace fasttext {
         try {
             // std::regex_match(word, std::regex("^(https?:\/\/)?([\da-z-]+\\.)+([a-z\\.]{2,6})([\/\w \\.-]*)*\/?$"));
             return std::regex_match(word, std::regex("^(https?:\/\/)?([\da-z-]+\\.)+([a-z\\.]{2,6})([\/\w \\.-]*)*\/?$"));
-        } catch (const boost::regex_error& e) {
+        } catch (const std::regex_error& e) {
             std::cerr << "REGEX ERROR: " << e.what() << std::endl;
             std::cerr << "REGEX ERROR CODE: " << e.code() << std::endl;
             exit(0);
