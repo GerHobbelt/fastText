@@ -4,11 +4,12 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/string_generator.hpp>
+// #include <boost/regex.hpp>
 #include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <string.h>
-#include <regex>
+#include <regex.h>
 
 namespace fasttext {
 
@@ -105,8 +106,16 @@ namespace fasttext {
     }
 
     bool Language::isWeb(const std::string word) {
-        return false;
-        //return std::regex_match(word, std::regex("^(https?:\/\/)?([\da-z-]+\\.)+([a-z\\.]{2,6})([\/\w \\.-]*)*\/?$"));
+        try {
+            // std::regex_match(word, std::regex("^(https?:\/\/)?([\da-z-]+\\.)+([a-z\\.]{2,6})([\/\w \\.-]*)*\/?$"));
+            return std::regex_match(word, std::regex("^(https?:\/\/)?([\da-z-]+\\.)+([a-z\\.]{2,6})([\/\w \\.-]*)*\/?$"));
+        } catch (const boost::regex_error& e) {
+            std::cerr << "REGEX ERROR: " << e.what() << std::endl;
+            std::cerr << "REGEX ERROR CODE: " << e.code() << std::endl;
+            exit(0);
+        }
+        std::cerr << "PASSED" << std::endl;
+        exit(0);
     }
 
     bool Language::isUUID(const std::string word) {
