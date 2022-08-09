@@ -443,7 +443,10 @@ bool Dictionary::checkValidWord(const std::string& word, std::shared_ptr<Languag
   if(!lang->isWord(word)){
     return false;}
   if(lang->isDuplicate(word)) return false; // Also checks for profanity and stopwords
-  if(lang->isWeb(word)) return false;
+  if(lang->isWeb(word)) {
+    std::cerr << word << " is a web address!" << std::endl;
+    return false;
+  }
   if(lang->isUUID(word)){
     std::cerr << word << " is a UUID!" << std::endl;
     return false;
