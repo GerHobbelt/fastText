@@ -287,7 +287,7 @@ void FastText::loadModel(std::istream& in, const std::string& lang) {
   args_ = std::make_shared<Args>();
   input_ = std::make_shared<DenseMatrix>();
   output_ = std::make_shared<DenseMatrix>();
-  std::cerr << "Loading model..." << std::endl;
+  std::cerr << "\nLoading model..." << std::endl;
   args_->load(in);
   if (version == 11 && args_->model == model_name::sup) {
     // backward compatibility: old supervised models do not use char ngrams.

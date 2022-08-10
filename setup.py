@@ -21,7 +21,7 @@ import subprocess
 import platform
 import io
 
-__version__ = '0.9.4'
+__version__ = '0.9.5'
 FASTTEXT_SRC = "src"
 BOOST_HEADERS = "boost"
 

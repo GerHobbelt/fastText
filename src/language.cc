@@ -99,7 +99,6 @@ namespace fasttext {
             s.erase(0, pos + delimiter.length());
         }
         if(flag and its > 0) {
-            // std::cerr << original << " is a composition of already known words!" << std::endl;
             return true;
         }
         return false;

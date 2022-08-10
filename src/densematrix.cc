@@ -95,13 +95,6 @@ void DenseMatrix::filterRows(std::vector<int64_t> rows) {
     std::sort(rows.begin(), rows.end());
   }
   eraseRows(rows);
-  // for(int64_t i = 0; i < rows.size(); i++) {
-  //   eraseRow(rows[i]-i);
-  //   std::cerr << "\rDeleting row " << rows[i] << "..." << std::flush;
-  //   // if (i % 1 == 0) {
-  //   //   std::cerr << "\rDeleted " << i << " rows" << std::flush;
-  //   // }
-  // }
 }
 
 real DenseMatrix::l2NormRow(int64_t i) const {

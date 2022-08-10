@@ -81,6 +81,7 @@ class DenseMatrix : public Matrix {
       }),
       std::end(data_)
     );
+    std::cerr << "\rRemoved " << rm_index << " rows..." << std::flush;
     m_ = m_ - deleted;
   }
 

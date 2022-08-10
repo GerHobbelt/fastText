@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 import fasttext_pybind as fasttext
 import numpy as np
 import multiprocessing
+import os
 import sys
 from itertools import chain
 
@@ -438,8 +439,20 @@ def tokenize(text):
     return f.tokenize(text)
 
 
-def load_model(path, clean=False, lang=None):
+def load_model(path, clean=False, lang=None, profanity_path=None, stopwords_path=None, multigram_mark="_"):
     """Load a model given a filepath and return a model object."""
+    if clean and not (profanity_path and stopwords_path):
+        raise AssertionError("You must specify the path to the stopwords directory and profanity words directory to clean the model!")
+    elif clean:
+        profanity_path = profanity_path + "/" if not profanity_path.endswith("/") else profanity_path
+        stopwords_path = stopwords_path + "/" if not stopwords_path.endswith("/") else stopwords_path
+        if not os.path.isdir(profanity_path):
+            raise AssertionError(f"{profanity_path} is not a valid dir!")
+        if not os.path.isdir(stopwords_path):
+            raise AssertionError(f"{stopwords_path} is not a valid dir!")
+        os.environ["PROFANITY_PATH"] = profanity_path
+        os.environ["STOPWORDS_PATH"] = stopwords_path
+        os.environ["MULTIGRAM_MARK"] = multigram_mark
     return _FastText(model_path=path, clean=clean, lang=lang)
 
 

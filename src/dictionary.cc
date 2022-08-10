@@ -439,18 +439,16 @@ std::string Dictionary::getLabel(int32_t lid) const {
 }
 
 bool Dictionary::checkValidWord(const std::string& word, std::shared_ptr<Language> lang) {
-  if(word.size() >= lang->max()){return false;}
-  if(!lang->isWord(word)){
-    return false;}
+  // Checks for bigrams, trigrams and higher and increases the maximum length for a word in a language accordingly
+  char* multigram_mark = std::getenv("MULTIGRAM_MARK");
+  int multiplier = 1;
+  int n = std::count(word.begin(), word.end(), multigram_mark[0]);
+  multiplier += n;
+  if(word.size() > (lang->max() * multiplier)) return false;
+  if(!lang->isWord(word)) return false;
   if(lang->isDuplicate(word)) return false; // Also checks for profanity and stopwords
-  if(lang->isWeb(word)) {
-    // std::cerr << word << " is a web address!" << std::endl;
-    return false;
-  }
-  if(lang->isUUID(word)){
-    std::cerr << word << " is a UUID!" << std::endl;
-    return false;
-  }
+  if(lang->isWeb(word)) return false;
+  if(lang->isUUID(word)) return false;
 
   return true;
 }
@@ -510,10 +508,10 @@ void Dictionary::load(std::istream& in, std::shared_ptr<Language> lang) {
       invalid_.push_back(i);
     }
     if (i % 100000 == 0) {
-      std::cerr << "Parsed " << i << " words" << std::endl;
+      std::cerr << "\rParsed " << i << " words" << std::flush;
     }
   }
-  std::cerr << "\nKept " << size_ << " valid words." << std::endl;
+  std::cerr << "\n\nKept " << size_ << " valid words.\n" << std::endl;
   pruneidx_.clear();
   for (int32_t i = 0; i < pruneidx_size_; i++) {
     int32_t first;
