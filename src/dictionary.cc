@@ -574,13 +574,9 @@ void Dictionary::clip(int32_t max_size, std::shared_ptr<Language> lang) {
     size_--;
     nwords_--;
     invalid_.push_back(i);
-    last = std::remove(words_.begin(), last, lang->words[i]);
-    if (i % 1000 == 0) {
-      std::cerr << "\rRemoved " << i - max_size << " words from vocabulary..." << std::flush;
-    }
   }
+  words_.erase(words_.begin() + max_size, words_.end());
   std::cerr << "\rRemoved " << lang->words.size() - max_size << " words from vocabulary." << std::endl;
-  words_.erase(last, words_.end());
 }
 
 void Dictionary::prune(std::vector<int32_t>& idx) {
