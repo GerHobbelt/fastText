@@ -261,6 +261,10 @@ PYBIND11_MODULE(fasttext_pybind, m) {
                     static_cast<float*>(outputMatrixInfo.ptr)));
           })
       .def(
+          "clipVocab",
+          [](fasttext::FastText& m, int32_t max_size) { m.clipVocab(max_size); }
+      )
+      .def(
           "loadModel",
           [](fasttext::FastText& m, std::string s) { m.loadModel(s); })
       .def("loadModelClean",

@@ -473,19 +473,12 @@ void Dictionary::save(std::ostream& out) const {
 }
 
 void Dictionary::load(std::istream& in, std::shared_ptr<Language> lang) {
-  std::cerr << "Starting dictionary initialization..." << std::endl;
   words_.clear();
   in.read((char*)&size_, sizeof(int32_t));
   in.read((char*)&nwords_, sizeof(int32_t));
   in.read((char*)&nlabels_, sizeof(int32_t));
   in.read((char*)&ntokens_, sizeof(int64_t));
   in.read((char*)&pruneidx_size_, sizeof(int64_t));
-  // std::cerr << "-------------------" << std::endl;
-  // std::cerr << "READ PARAMETERS" << std::endl;
-  // std::cerr << "Size: " << size_ << std::endl;
-  // std::cerr << "Nwords: " << nwords_ << std::endl;
-  // std::cerr << "Nlabels:" << nlabels_ << std::endl;
-  // std::cerr << "Ntokens:" << ntokens_ << std::endl;
   for (int32_t i = 0; i < size_; i++) {
     char c;
     entry e;
@@ -569,6 +562,25 @@ void Dictionary::load(std::istream& in) {
 void Dictionary::init() {
   initTableDiscard();
   initNgrams();
+}
+
+void Dictionary::clip(int32_t max_size, std::shared_ptr<Language> lang) {
+  if (lang->words.size() < max_size) {
+    std::cerr << "Nothing to clip!" << std::endl;
+    return;
+  }
+  std::vector<entry>::iterator last = words_.end();
+  for(int32_t i = max_size; i < lang->words.size(); i++) {
+    size_--;
+    nwords_--;
+    invalid_.push_back(i);
+    last = std::remove(words_.begin(), last, lang->words[i]);
+    if (i % 1000 == 0) {
+      std::cerr << "\rRemoved " << i - max_size << " words from vocabulary..." << std::flush;
+    }
+  }
+  std::cerr << "\rRemoved " << lang->words.size() - max_size << " words from vocabulary." << std::endl;
+  words_.erase(last, words_.end());
 }
 
 void Dictionary::prune(std::vector<int32_t>& idx) {

@@ -22,16 +22,6 @@
 
 namespace fasttext {
 
-// typedef int32_t id_type;
-// enum class entry_type : int8_t { word = 0, label = 1 };
-
-// struct entry {
-//   std::string word;
-//   int64_t count;
-//   entry_type type;
-//   std::vector<int32_t> subwords;
-// };
-
 class Dictionary {
  protected:
   static const int32_t MAX_VOCAB_SIZE = 30000000;
@@ -107,6 +97,13 @@ class Dictionary {
   std::vector<int64_t> getInvalidWords() {
     return invalid_;
   }
+  int getInvalidSize() {
+    return invalid_.size();
+  }
+  void clearInvalidWords() {
+    invalid_.clear();
+  }
+  void clip(int32_t, std::shared_ptr<Language>);
   void threshold(int64_t, int64_t);
   void prune(std::vector<int32_t>&);
   bool isPruned() {

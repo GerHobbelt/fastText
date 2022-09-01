@@ -83,6 +83,15 @@ void FastText::setMatrices(
   buildModel();
 }
 
+void FastText::clipVocab(int32_t max_size) {
+  dict_->clip(max_size, lang_);
+  input_->filterRows(dict_->getInvalidWords());
+  std::cerr << "Removed " << dict_->getInvalidSize() << " rows from matrix." << std::endl;
+  lang_->filterWords(dict_->getInvalidWords());
+  std::cerr << "Removed " << dict_->getInvalidSize() << " words from language." << std::endl;
+  dict_->clearInvalidWords();
+}
+
 std::shared_ptr<const DenseMatrix> FastText::getOutputMatrix() const {
   if (quant_ && args_->qout) {
     throw std::runtime_error("Can't export quantized matrix");
@@ -307,8 +316,11 @@ void FastText::loadModel(std::istream& in, const std::string& lang) {
   std::cerr << "Input matrix loaded!" << std::endl;
   if (!quant_input) {
     input_->filterRows(dict_->getInvalidWords());
+    std::cerr << "Rows filtered!" << std::endl;
+    lang_->filterWords(dict_->getInvalidWords());
+    std::cerr << "Words filtered!" << std::endl;
+    dict_->clearInvalidWords();
   }
-  std::cerr << "Rows filtered!" << std::endl;
 
   if (!quant_input && dict_->isPruned()) {
     throw std::invalid_argument(

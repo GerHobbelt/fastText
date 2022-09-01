@@ -372,6 +372,10 @@ class _FastText(object):
             self.f.setMatrices(input_matrix.astype(np.float32),
                                output_matrix.astype(np.float32))
 
+    def clip_vocab(self, max_size):
+        self.f.clipVocab(max_size)
+        self._words = None
+
     @property
     def words(self):
         if self._words is None:

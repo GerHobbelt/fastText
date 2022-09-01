@@ -90,7 +90,6 @@ void DenseMatrix::divideRow(const Vector& denoms, int64_t ib, int64_t ie) {
 }
 
 void DenseMatrix::filterRows(std::vector<int64_t> rows) {
-  std::cerr << "Filtering " << rows.size() << " rows..." << std::endl;
   if(!std::is_sorted(rows.begin(), rows.end())) {
     std::sort(rows.begin(), rows.end());
   }

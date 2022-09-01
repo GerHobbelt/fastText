@@ -47,6 +47,30 @@ namespace fasttext {
         words.push_back(e);
     }
 
+    void Language::filterWords(std::vector<int64_t> indices) {
+        if(!std::is_sorted(indices.begin(), indices.end())) {
+            std::sort(indices.begin(), indices.end());
+        }
+        size_t rm_index = 0;
+        words.erase(
+            std::remove_if(std::begin(words), std::end(words), [&](entry& elem)
+            {
+                if (rm_index < indices.size() && int(&elem - &words[0]) == indices[rm_index])
+                {
+                    rm_index++;
+                    dict_.erase(elem.word);
+                    if(rm_index % 10000 == 0) {
+                        std::cerr << "\rRemoved " << rm_index << " words..." << std::flush;
+                    }
+                    return true;
+                }
+                return false;
+            }),
+            std::end(words)
+        );
+        std::cerr << "\rRemoved " << rm_index << " words..." << std::flush;
+    }
+
     bool Language::isWord(const std::string word) {
         for(int8_t i = 0; i < word.size(); i++) {
             if(std::isalpha(word[i])){return true;}

@@ -110,6 +110,8 @@ class FastText {
       const std::shared_ptr<DenseMatrix>& inputMatrix,
       const std::shared_ptr<DenseMatrix>& outputMatrix);
 
+  void clipVocab(int32_t);
+
   std::shared_ptr<const DenseMatrix> getOutputMatrix() const;
 
   void saveVectors(const std::string& filename);

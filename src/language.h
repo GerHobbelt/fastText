@@ -27,6 +27,10 @@ struct entry {
   int64_t count;
   entry_type type;
   std::vector<int32_t> subwords;
+
+  bool operator==(const entry &other) const {
+    return other.word == word;
+  }
 };
 
 struct lang {
@@ -58,6 +62,7 @@ class Language {
     };
     void init(const std::string& lang);
     void addWord(const entry);
+    void filterWords(std::vector<int64_t> indices);
     bool isWord(const std::string);        // check that there is at least a letter
     bool isDuplicate(std::string);         // check that the word isn't already present after stripping punctuation and lowercasing,
                                            // also check that individual tokens are present in the model after splitting on punctuation?
