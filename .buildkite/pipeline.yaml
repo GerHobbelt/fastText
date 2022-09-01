@@ -1,5 +1,6 @@
 steps:
   - name: ':docker: Build and push Docker image to tink-containers'
+    branches: 'master'
     timeout_in_minutes: 10
     command: |
       # Build
