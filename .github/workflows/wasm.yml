@@ -30,3 +30,11 @@ jobs:
       run: emcc -v
 
     - run: make wasm
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: fasttext-wasm
+        path: |
+          webassembly/fasttext.js
+          webassembly/fasttext_wasm.wasm
+          webassembly/fasttext_wasm.js
