@@ -1,0 +1,32 @@
+{
+  "name": "@rafaelkallis/fasttext",
+  "version": "1.0.0",
+  "description": "[fastText](https://fasttext.cc/) is a library for efficient learning of word representations and sentence classification.",
+  "main": "webassembly/fasttext_node.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rafaelkallis/fastText.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rafaelkallis/fastText/issues"
+  },
+  "homepage": "https://github.com/rafaelkallis/fastText#readme",
+  "dependencies": {
+    "node-fetch": "2.6.7"
+  },
+  "devDependencies": {
+    "jest": "29.3.1"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  }
+}
