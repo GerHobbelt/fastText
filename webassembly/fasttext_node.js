@@ -1,4 +1,3 @@
-const fetch = require('node-fetch');
 const Module = require('./fasttext_wasm');
 const fs = require('fs/promises');
 
