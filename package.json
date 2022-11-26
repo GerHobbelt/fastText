@@ -20,9 +20,7 @@
     "url": "https://github.com/rafaelkallis/fastText/issues"
   },
   "homepage": "https://github.com/rafaelkallis/fastText#readme",
-  "dependencies": {
-    "node-fetch": "2.6.7"
-  },
+  "dependencies": {},
   "devDependencies": {
     "jest": "29.3.1"
   },
