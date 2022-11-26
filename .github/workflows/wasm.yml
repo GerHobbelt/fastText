@@ -6,7 +6,6 @@ on:
 
 env:
   EM_VERSION: 3.1.26
-  # EM_VERSION: 1.40.1
 
 jobs:
   build:
@@ -26,12 +25,12 @@ jobs:
     - run: make wasm
 
     - name: test
-      run: node webassembly/test.js
+      run: npm test
 
-    - uses: actions/upload-artifact@v3
-      with:
-        name: fasttext-wasm
-        path: |
-          webassembly/fasttext.js
-          webassembly/fasttext_wasm.wasm
-          webassembly/fasttext_wasm.js
+    # - uses: actions/upload-artifact@v3
+    #   with:
+    #     name: fasttext-wasm
+    #     path: |
+    #       webassembly/fasttext.js
+    #       webassembly/fasttext_wasm.wasm
+    #       webassembly/fasttext_wasm.js
