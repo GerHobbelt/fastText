@@ -27,6 +27,7 @@ jobs:
   
   publish:
     needs: build
+    runs-on: ubuntu-22.04
     steps:
     - run: npm ci --production
     - run: npm publish --access public
