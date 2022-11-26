@@ -26,19 +26,8 @@ jobs:
     - run: npm test
   
   publish:
-    runs-on: ubuntu-22.04
+    needs: build
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        registry-url: https://registry.npmjs.org/
-    - uses: mymindstorm/setup-emsdk@v11
-      with:
-        version: ${{ env.EMSDK_VERSION }}
-
-    - run: emcc -v
-    - run: make wasm
     - run: npm ci --production
     - run: npm publish --access public
       env:

@@ -10,6 +10,10 @@ describe("FastText WebAssemply", () => {
 		await fs.writeFile("model-test.bin", await response.buffer());
 	});
 
+	afterAll(async () => {
+		await fs.unlink("model-test.bin");
+	});
+
 	beforeEach(async () => {
 		fastText = await FastText.from("model-test.bin");
 	});
