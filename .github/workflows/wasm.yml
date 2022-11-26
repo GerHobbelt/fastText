@@ -5,7 +5,8 @@ on:
     branches: [ "main" ]
 
 env:
-  EM_VERSION: 3.1.26
+  NODE_VERSION: 16
+  EMSDK_VERSION: 3.1.26
 
 jobs:
   build:
@@ -14,15 +15,18 @@ jobs:
     - uses: actions/checkout@v3
     - uses: actions/setup-node@v3
       with:
-        node-version: 16
+        node-version: ${{ env.NODE_VERSION }}
     - uses: mymindstorm/setup-emsdk@v11
       with:
-        version: ${{ env.EM_VERSION }}
+        version: ${{ env.EMSDK_VERSION }}
 
     - name: Verify Emcc
       run: emcc -v
 
     - run: make wasm
+
+    - name: install
+      run: npm ci
 
     - name: test
       run: npm test
