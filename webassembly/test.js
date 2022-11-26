@@ -19,7 +19,7 @@ describe("FastText WebAssemply", () => {
 		["Idea to improve the product", "enhancement"],
 		["I have a question", "question"],
 	];
-	test.each(table)(".predict(%s)", (text, expectedLabel) => {
+	test.each(table)(".predict('%s')", (text, expectedLabel) => {
 		const [[label, prob]] = fastText.predict(text);
 		expect(label).toBe(expectedLabel);
 		expect(prob).toBeGreaterThan(0.5);

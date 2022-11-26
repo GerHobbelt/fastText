@@ -1,0 +1,46 @@
+name: WebAssembly Node Package
+
+on:
+  release:
+    types: [ created ]
+
+env:
+  UBUNTU_VERSION: 22.04
+  NODE_VERSION: 16
+  EMSDK_VERSION: 3.1.26
+
+jobs:
+  build:
+    runs-on: ubuntu-${{ env.UBUNTU_VERSION }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    - uses: mymindstorm/setup-emsdk@v11
+      with:
+        version: ${{ env.EMSDK_VERSION }}
+
+    - run: emcc -v
+    - run: make wasm
+    - run: npm ci
+    - run: npm test
+  
+  publish:
+    runs-on: ubuntu-${{ env.UBUNTU_VERSION }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        registry-url: https://registry.npmjs.org/
+    - uses: mymindstorm/setup-emsdk@v11
+      with:
+        version: ${{ env.EMSDK_VERSION }}
+
+    - run: emcc -v
+    - run: make wasm
+    - run: npm ci --production
+    - run: npm publish --access public
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
