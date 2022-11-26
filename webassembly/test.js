@@ -1,5 +1,6 @@
 const fetch = require('node-fetch');
 const fs = require('fs/promises');
+const os = require('os');
 const { FastText } = require('./fasttext_node');
 
 describe("FastText WebAssemply", () => {
@@ -7,15 +8,11 @@ describe("FastText WebAssemply", () => {
 
 	beforeAll(async () => {
 		const response = await fetch("https://tickettagger.blob.core.windows.net/models/model-2018-11-12.bin")
-		await fs.writeFile("model-test.bin", await response.buffer());
-	});
-
-	afterAll(async () => {
-		await fs.unlink("model-test.bin");
+		await fs.writeFile(`${os.tmpdir()}/model-test.bin`, await response.buffer());
 	});
 
 	beforeEach(async () => {
-		fastText = await FastText.from("model-test.bin");
+		fastText = await FastText.from(`${os.tmpdir()}/model-test.bin`);
 	});
 
 	const table = [
