@@ -233,9 +233,6 @@ void FastText::loadModel(const std::string& filename, bool loadOutput) {
   if (!ifs.is_open()) {
     throw std::invalid_argument(filename + " cannot be opened for loading!");
   }
-  if (!checkModel(ifs)) {
-    throw std::invalid_argument(filename + " has wrong file format!");
-  }
   loadModel(ifs, loadOutput);
   ifs.close();
 }
@@ -244,9 +241,6 @@ void FastText::loadModelClean(const std::string& filename, const std::string& la
   std::ifstream ifs(filename, std::ifstream::binary);
   if (!ifs.is_open()) {
     throw std::invalid_argument(filename + " cannot be opened for loading!");
-  }
-  if (!checkModel(ifs)) {
-    throw std::invalid_argument(filename + " has wrong file format!");
   }
   loadModel(ifs, lang, loadOutput);
   ifs.close();
@@ -267,6 +261,9 @@ void FastText::buildModel() {
 }
 
 void FastText::loadModel(std::istream& in, bool loadOutput) {
+  if (!checkModel(in)) {
+    throw std::invalid_argument("input has wrong file format!");
+  }
   args_ = std::make_shared<Args>();
   input_ = std::make_shared<DenseMatrix>();
   output_ = std::make_shared<DenseMatrix>();
