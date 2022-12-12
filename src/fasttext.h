@@ -120,13 +120,13 @@ class FastText {
 
   void saveOutput(const std::string& filename);
 
-  void loadModel(std::istream& in);
+  void loadModel(std::istream& in, bool loadOutput=true);
 
-  void loadModel(std::istream& in, const std::string& lang);
+  void loadModel(std::istream& in, const std::string& lang, bool loadOutput);
 
-  void loadModel(const std::string& filename);
+  void loadModel(const std::string& filename, bool loadOutput=true);
 
-  void loadModelClean(const std::string& filename, const std::string& lang);
+  void loadModelClean(const std::string& filename, const std::string& lang, bool loadOutput);
 
   void getSentenceVector(std::istream& in, Vector& vec);
 

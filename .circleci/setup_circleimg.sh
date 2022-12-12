@@ -7,5 +7,5 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-sudo apt-get update
+sudo apt-get update || sudo apt-get --allow-releaseinfo-change-suite update
 sudo apt-get install -y cmake python-pip python-dev build-essential

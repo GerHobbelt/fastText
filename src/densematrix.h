@@ -47,7 +47,7 @@ class DenseMatrix : public Matrix {
   }
 
   inline const real& at(int64_t i, int64_t j) const {
-    assert(i * n_ + j < data_.size());
+    assert(std::vector<real>::size_type(i * n_ + j) < data_.size());
     return data_[i * n_ + j];
   };
   inline real& at(int64_t i, int64_t j) {

@@ -44,7 +44,8 @@ void printUsage() {
 }
 
 void printQuantizeUsage() {
-  std::cerr << "usage: fasttext quantize <args>" << std::endl;
+  std::cerr << "usage: fasttext quantize -output <prefix> <args>" << std::endl;
+  std::cerr << "For quantize, the output argument is the name of the input file without the .bin extension. The <prefix>.bin file will be read and the result will be written to <prefix.ftz>" << std::endl;
 }
 
 void printTestUsage() {
@@ -98,7 +99,7 @@ void printPrintNgramsUsage() {
 
 void quantize(const std::vector<std::string>& args) {
   Args a = Args();
-  if (args.size() < 3) {
+  if (args.size() < 2) {
     printQuantizeUsage();
     a.printHelp();
     exit(EXIT_FAILURE);

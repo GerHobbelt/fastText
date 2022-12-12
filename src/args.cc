@@ -224,7 +224,12 @@ void Args::parseArgs(const std::vector<std::string>& args) {
       exit(EXIT_FAILURE);
     }
   }
-  if (input.empty() || output.empty()) {
+  if (command == "quantize" && output.empty()) {
+    std::cerr << "Output path must no be empty for quantize." << std::endl;
+    printHelp();
+    exit(EXIT_FAILURE);
+  }
+  else if (input.empty() || output.empty()) {
     std::cerr << "Empty input or output path." << std::endl;
     printHelp();
     exit(EXIT_FAILURE);

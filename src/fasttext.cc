@@ -219,7 +219,7 @@ void FastText::saveModel(const std::string& filename) {
   ofs.close();
 }
 
-void FastText::loadModel(const std::string& filename) {
+void FastText::loadModel(const std::string& filename, bool loadOutput) {
   std::ifstream ifs(filename, std::ifstream::binary);
   if (!ifs.is_open()) {
     throw std::invalid_argument(filename + " cannot be opened for loading!");
@@ -227,11 +227,11 @@ void FastText::loadModel(const std::string& filename) {
   if (!checkModel(ifs)) {
     throw std::invalid_argument(filename + " has wrong file format!");
   }
-  loadModel(ifs);
+  loadModel(ifs, loadOutput);
   ifs.close();
 }
 
-void FastText::loadModelClean(const std::string& filename, const std::string& lang) {
+void FastText::loadModelClean(const std::string& filename, const std::string& lang, bool loadOutput) {
   std::ifstream ifs(filename, std::ifstream::binary);
   if (!ifs.is_open()) {
     throw std::invalid_argument(filename + " cannot be opened for loading!");
@@ -239,7 +239,7 @@ void FastText::loadModelClean(const std::string& filename, const std::string& la
   if (!checkModel(ifs)) {
     throw std::invalid_argument(filename + " has wrong file format!");
   }
-  loadModel(ifs, lang);
+  loadModel(ifs, lang, loadOutput);
   ifs.close();
 }
 
@@ -257,7 +257,7 @@ void FastText::buildModel() {
   model_ = std::make_shared<Model>(input_, output_, loss, normalizeGradient);
 }
 
-void FastText::loadModel(std::istream& in) {
+void FastText::loadModel(std::istream& in, bool loadOutput) {
   args_ = std::make_shared<Args>();
   input_ = std::make_shared<DenseMatrix>();
   output_ = std::make_shared<DenseMatrix>();
@@ -287,12 +287,15 @@ void FastText::loadModel(std::istream& in) {
   if (quant_ && args_->qout) {
     output_ = std::make_shared<QuantMatrix>();
   }
-  output_->load(in);
+
+  if (loadOutput) {
+    output_->load(in);
+  }
 
   buildModel();
 }
 
-void FastText::loadModel(std::istream& in, const std::string& lang) {
+void FastText::loadModel(std::istream& in, const std::string& lang, bool loadOutput) {
   args_ = std::make_shared<Args>();
   input_ = std::make_shared<DenseMatrix>();
   output_ = std::make_shared<DenseMatrix>();
@@ -333,7 +336,10 @@ void FastText::loadModel(std::istream& in, const std::string& lang) {
   if (quant_ && args_->qout) {
     output_ = std::make_shared<QuantMatrix>();
   }
-  output_->load(in);
+
+  if (loadOutput) {
+    output_->load(in);
+  }
 
   buildModel();
 }
@@ -389,8 +395,7 @@ std::vector<int32_t> FastText::selectEmbeddings(int32_t cutoff) const {
 
 void FastText::quantize(const Args& qargs, const TrainCallback& callback) {
   if (args_->model != model_name::sup) {
-    throw std::invalid_argument(
-        "For now we only support quantization of supervised models");
+    std::cerr << "For now we only support quantization of supervised models. I have no idea why. Let's try anyway." << std::endl;
   }
   args_->input = qargs.input;
   args_->qout = qargs.qout;
