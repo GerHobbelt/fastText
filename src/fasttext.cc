@@ -537,6 +537,35 @@ void FastText::predict(
   model_->predict(words, k, threshold, predictions, state);
 }
 
+bool FastText::predictLineWords(
+		std::istream& in,
+		std::vector<std::pair<real, std::string>>& predictions,
+		int32_t k,
+		real threshold,
+		std::vector<std::string>& wordsStrings,
+		std::vector<std::string>& tokens) const {
+	predictions.clear();
+	if (in.peek() == EOF) {
+		return false;
+	}
+
+	std::vector<int32_t> words, labels;
+	dict_->getLineTokens(in, words, labels, tokens);
+
+	for (auto&& wid : words) {
+		wordsStrings.push_back(dict_->getWord(wid));
+	}
+
+	Predictions linePredictions;
+	predict(k, words, linePredictions, threshold);
+	for (const auto& p : linePredictions) {
+		predictions.push_back(
+				std::make_pair(std::exp(p.first), dict_->getLabel(p.second)));
+	}
+
+	return true;
+}
+
 bool FastText::predictLine(
     std::istream& in,
     std::vector<std::pair<real, std::string>>& predictions,

@@ -63,6 +63,18 @@ std::vector<std::pair<fasttext::real, py::str>> castToPythonString(
   return transformedPredictions;
 }
 
+std::vector<py::str> castToPythonString(
+		const std::vector<std::string>& strs,
+		const char* onUnicodeError) {
+	std::vector<py::str> transformedStrs;
+
+	for (const auto& str : strs) {
+		transformedStrs.emplace_back(str);
+	}
+
+	return transformedStrs;
+}
+
 std::pair<std::vector<py::str>, std::vector<py::str>> getLineText(
     fasttext::FastText& m,
     const std::string text,
@@ -416,6 +428,27 @@ PYBIND11_MODULE(fasttext_pybind, m) {
 
             return castToPythonString(predictions, onUnicodeError);
           })
+	 .def(
+		"predictWords",
+		// NOTE: text needs to end in a newline
+		// to exactly mimic the behavior of the cli
+		[](fasttext::FastText& m,
+		const std::string text,
+				int32_t k,
+		fasttext::real threshold,
+		const char* onUnicodeError) {
+		std::stringstream ioss(text);
+		std::vector<std::pair<fasttext::real, std::string>> predictions;
+		std::vector<std::string> words;
+		std::vector<std::string> tokens;
+		m.predictLineWords(ioss, predictions, k, threshold, words, tokens);
+
+		return std::tuple<std::vector<std::pair<fasttext::real, py::str>>, std::vector<py::str>, std::vector<py::str>>(
+			castToPythonString(predictions, onUnicodeError),
+			castToPythonString(words, onUnicodeError),
+			castToPythonString(tokens, onUnicodeError)
+		);
+	  })
       .def(
           "multilinePredict",
           // NOTE: text needs to end in a newline
