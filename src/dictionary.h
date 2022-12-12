@@ -36,6 +36,9 @@ class Dictionary {
   void addSubwords(std::vector<int32_t>&, const std::string&, int32_t) const;
 
   std::shared_ptr<Args> args_;
+  /// NOTE: 
+  /// TODO: Here is a complicate mapping strategy! Should make sure if understood.
+  /// Each index in `word2int_` represents an word bucket, which could be
   std::vector<int32_t> word2int_;
   std::vector<entry> words_;
   std::vector<int64_t> invalid_; // list of invalid words to remove from matrix

@@ -24,10 +24,14 @@ class Loss;
 
 class Model {
  protected:
+  /// `wi_` means "w input", which represents the parameters of 
+  /// the model's input layer. 
   std::shared_ptr<Matrix> wi_;
-  std::shared_ptr<Matrix> wo_;
+  /// `wo_` means "w ouput", which represents the parameters of 
+  /// the model's output layer.
+  std::shared_ptr<Matrix> wo_; 
   std::shared_ptr<Loss> loss_;
-  bool normalizeGradient_;
+  bool normalizeGradient_; // If normalize the gradients
 
  public:
   Model(
@@ -40,6 +44,12 @@ class Model {
   Model& operator=(const Model& other) = delete;
   Model& operator=(Model&& other) = delete;
 
+  /**
+   * @brief
+   * The name "State" is sort like "hiden state", but actually this is not 
+   * "hidden", `State` just holding some infomation such as gradients, 
+   * parameters, loss value, the rule of normalization gradients, etc.
+   */
   class State {
    private:
     real lossValue_;
@@ -48,6 +58,12 @@ class Model {
    public:
     Vector hidden;
     Vector output;
+    /// NOTE: 
+    /// `grad` isn't for the gradient of parameters matrix mapping hidden 
+    /// layer to output layer, it's used for saving the gradients of the 
+    /// parameters matrix mapping model input to model hidden layer, by 
+    /// averaging all input tokens' embedding vectors, which is also the 
+    /// parameters matrix saving each tokens embedding vectors.
     Vector grad;
     std::minstd_rand rng;
 

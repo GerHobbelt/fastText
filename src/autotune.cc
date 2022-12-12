@@ -88,6 +88,9 @@ T getArgGauss(
   return returnValue;
 }
 
+/**
+ * @brief Update target autotuning hyperparameters based on Gauss strategy.
+ */
 template <typename T>
 T updateArgGauss(
     T val,
@@ -120,6 +123,9 @@ AutotuneStrategy::AutotuneStrategy(
       bestNonzeroBucket_(2000000),
       originalBucket_(originalArgs.bucket) {
   minnChoices_ = {0, 2, 3};
+  /// Using original hyperparameters as the start-point of the best 
+  /// hyperparameters, which will be continuously updated following 
+  /// autotune strategy.
   updateBest(originalArgs);
 }
 
@@ -127,12 +133,15 @@ Args AutotuneStrategy::ask(double elapsed) {
   const double t = std::min(1.0, elapsed / maxDuration_);
   trials_++;
 
+  /// If only try one-time autotune, than current hyperparameters is the 
+  /// best one.
   if (trials_ == 1) {
     return bestArgs_;
   }
 
   Args args = bestArgs_;
 
+  /// If this argument is not assigned by human
   if (!args.isManual("epoch")) {
     args.epoch = updateArgGauss(args.epoch, 1, 100, 2.8, 2.5, t, false, rng_);
   }
@@ -196,6 +205,10 @@ int AutotuneStrategy::getIndex(int val, const std::vector<int>& choices) {
   return ind;
 }
 
+/**
+ * @brief
+ * Update best hyper-parameters to the best-hyperparameters holder.
+ */
 void AutotuneStrategy::updateBest(const Args& args) {
   bestArgs_ = args;
   bestMinnIndex_ = getIndex(args.minn, minnChoices_);
@@ -247,6 +260,9 @@ void Autotune::timer(
   abort();
 }
 
+/**
+ * @brief Set coldtime between each training.
+ */
 bool Autotune::keepTraining(double maxDuration) const {
   return continueTraining_ && elapsed_ < maxDuration;
 }
@@ -380,6 +396,12 @@ void Autotune::printSkippedArgs(const Args& autotuneArgs) {
   }
 }
 
+/**
+ * @brief Main entry of training model under autotuning mode.
+ * 
+ * @param autotuneArgs Sub-arguments holder (which is the output of `Args::parseArgs`) 
+ *   fitting current training mode. 
+ */
 void Autotune::train(const Args& autotuneArgs) {
   std::ifstream validationFileStream(autotuneArgs.autotuneValidationFile);
   if (!validationFileStream.is_open()) {
@@ -389,14 +411,18 @@ void Autotune::train(const Args& autotuneArgs) {
 
   bool sizeConstraintWarning = false;
   int verbose = autotuneArgs.verbose;
+  /// Initializing a `Args` holder for best training hyper-parameters.
   Args bestTrainArgs(autotuneArgs);
+  /// Initializing a `Args` holder for current using training hyper-parameters. 
   Args trainArgs(autotuneArgs);
   trainArgs.verbose = 0;
+  /// Initializing an autotune-strategy manager object.
   strategy_ = std::unique_ptr<AutotuneStrategy>(
       new AutotuneStrategy(trainArgs, autotuneArgs.seed));
   startTimer(autotuneArgs);
 
   while (keepTraining(autotuneArgs.autotuneDuration)) {
+    /// Update the counting of autotune trail times.
     trials_++;
 
     trainArgs = strategy_->ask(elapsed_);

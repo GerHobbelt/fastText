@@ -21,6 +21,7 @@ namespace fasttext {
 
 class AutotuneStrategy {
  private:
+  /// Best hyperparameters recorder.
   Args bestArgs_;
   int maxDuration_;
   std::minstd_rand rng_;

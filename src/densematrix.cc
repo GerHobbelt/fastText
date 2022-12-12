@@ -96,6 +96,11 @@ void DenseMatrix::filterRows(std::vector<int64_t> rows) {
   eraseRows(rows);
 }
 
+/**
+ * @brief Calculate one row's l2-norm in this matrix instance.
+ *
+ * @param i The i-th row for this matrix which l2-norm will be calculated.
+ */
 real DenseMatrix::l2NormRow(int64_t i) const {
   auto norm = 0.0;
   for (auto j = 0; j < n_; j++) {
@@ -107,6 +112,10 @@ real DenseMatrix::l2NormRow(int64_t i) const {
   return std::sqrt(norm);
 }
 
+/**
+ * @brief 
+ * Calculating each row's l2-norm for this matrix, saving results in `norms`.
+ */
 void DenseMatrix::l2NormRow(Vector& norms) const {
   assert(norms.size() == m_);
   for (auto i = 0; i < m_; i++) {
@@ -147,6 +156,19 @@ void DenseMatrix::setVectorToRow(const Vector& vec, int64_t i) {
   }
 }
 
+/**
+ * @brief
+ * Similiar with `DenseMatrix::addRowToVector(Vector& x, int32_t i, real a)`, 
+ * But this time adding (vec * a) to i-th row of current `DenseMatrix` object.
+ *
+ * @param vec The given `Vector` object using to firstly multiply with an factor 
+ *   and than the result will be added to certain row of current `DenseMatrix` 
+ *   object.
+ * @param i The multiplication result of `vec` and `a` will be added to i-th row 
+ *   of current `DenseMatrix` object.
+ * @param a The multiplication factor, the `vec` will first multiply with `a`, and 
+ * then the result will be added to i-th row of current `DenseMatrix` object. 
+ */
 void DenseMatrix::addVectorToRow(const Vector& vec, int64_t i, real a) {
   assert(i >= 0);
   assert(i < m_);
@@ -165,6 +187,18 @@ void DenseMatrix::addRowToVector(Vector& x, int32_t i) const {
   }
 }
 
+/**
+ * @brief 
+ * This name `addRowToVector` is VERY CONFUSING for this using case!!!
+ * 
+ * This is not simply adding i-th row of this `DenseMatrix` object to 
+ * `Vector` object `x`, but add the result of multiply a factor `a` 
+ * with i-th row of this `DenseMatrix` object and then adds to `x`.
+ * 
+ * @param x The target `Vector` object waiting to be updated.
+ * @param i Ths i-th row of current `DenseMatrix` object to adding to.
+ * @param a Mutiply factor of i-th row of current `DenseMatrix` object. 
+ */
 void DenseMatrix::addRowToVector(Vector& x, int32_t i, real a) const {
   assert(i >= 0);
   assert(i < this->size(0));

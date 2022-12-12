@@ -421,6 +421,8 @@ void train(const std::vector<std::string> args) {
 
   if (a.hasAutotune() &&
       a.getAutotuneModelSize() != Args::kUnlimitedModelSize) {
+    /// If given an upper limit of model size, then the autotuning process will 
+    /// be following with a PQ model compression process.
     outputFileName = a.output + ".ftz";
   } else {
     outputFileName = a.output + ".bin";

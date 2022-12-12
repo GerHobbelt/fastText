@@ -41,10 +41,24 @@ class FastText {
   std::shared_ptr<Args> args_;
   std::shared_ptr<Dictionary> dict_;
   std::shared_ptr<Language> lang_;
+  /// The input layer, which is a matrix, sort of embedding lookup layer, this 
+  /// will mapping the input-token-id to embedding vector, one dim of the 
+  /// matrix is same with the input tokens' number saving in `dict_`, another 
+  /// dim is same with the embedding size. 
   std::shared_ptr<Matrix> input_;
   std::shared_ptr<Matrix> output_;
   std::shared_ptr<Model> model_;
-  std::atomic<int64_t> tokenCount_{};
+  /// `tokenCount_` counts up to now how many tokens (without duplicates 
+  /// elimination) have been pass to training progress, used for calculate 
+  /// training progress rate.
+  /// NOTE: 
+  /// The reason why define `tokenCount_` as an `std::atomic<int64_t>` variable 
+  /// is, during the multi-thread training mode with SGD as optimizing algorithm, 
+  /// after each thread has processed one sample, that thread will updating the 
+  /// current `tokenCount_` to `tokenCount_ + 1` since one sample has just been 
+  /// processed, so we needs guarantee the thread-safety of `tokenCount_` as a  
+  /// counter that each thread can read and write.
+  std::atomic<int64_t> tokenCount_{}; 
   std::atomic<real> loss_{};
   std::chrono::steady_clock::time_point start_;
   bool quant_;

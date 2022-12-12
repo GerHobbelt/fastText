@@ -27,7 +27,12 @@ namespace fasttext {
 
 class QuantMatrix : public Matrix {
  protected:
+  /// Product-quantizer for target-quantization-matrix itself, in fastText, 
+  /// which could be embedding-matrix or output-layer's parameters matrix.
   std::unique_ptr<ProductQuantizer> pq_;
+  /// `npq_` represents product-quantizer for target-quantization-matrix's 
+  /// l2-norm vector. Target-quantization-matrix could be embedding-matrix 
+  /// or output-layer's parameters matrix. 
   std::unique_ptr<ProductQuantizer> npq_;
 
   std::vector<uint8_t> codes_;
