@@ -48,15 +48,16 @@ class Dictionary {
 
   int64_t pruneidx_size_;
   std::unordered_map<int32_t, int32_t> pruneidx_;
-  void addWordNgrams(
-      std::vector<int32_t>& line,
-      const std::vector<int32_t>& hashes,
-      int32_t n) const;
 
  public:
   static const std::string EOS;
   static const std::string BOW;
   static const std::string EOW;
+
+  static const int32_t SKIP_EOS = 0x01;
+  static const int32_t SKIP_OOV = 0x02;
+  static const int32_t SKIP_FRQ = 0x04;
+  static const int32_t SKIP_LNG = 0x08;
 
   explicit Dictionary(std::shared_ptr<Args>);
   explicit Dictionary(std::shared_ptr<Args>, std::istream&);
@@ -71,6 +72,7 @@ class Dictionary {
   bool discard(int32_t, real) const;
   bool checkValidWord(const std::string&, std::shared_ptr<Language>);
   std::string getWord(int32_t) const;
+  int64_t getTokenCount(int32_t) const;
   const std::vector<int32_t>& getSubwords(int32_t) const;
   const std::vector<int32_t> getSubwords(const std::string&) const;
   void getSubwords(
@@ -81,10 +83,21 @@ class Dictionary {
       const std::string&,
       std::vector<int32_t>&,
       std::vector<std::string>* substrings = nullptr) const;
+  void addWordNgrams(
+      std::vector<int32_t>& line,
+      const std::vector<int32_t>& hashes,
+      int32_t n) const;
+  void addWordNgrams(
+      std::vector<int32_t>& line, 
+      const std::vector<int32_t>& hashes,
+      int32_t n, 
+      int32_t k, 
+      std::minstd_rand& rng) const;
   uint32_t hash(const std::string& str) const;
   void add(const std::string&);
   bool readWord(std::istream&, std::string&) const;
   void readFromFile(std::istream&);
+  void update(std::shared_ptr<Dictionary>, bool discardOovWords);
   std::string getLabel(int32_t) const;
   void save(std::ostream&) const;
   void load(std::istream&);
@@ -96,6 +109,8 @@ class Dictionary {
 	const;
   int32_t getLine(std::istream&, std::vector<int32_t>&, std::minstd_rand&)
       const;
+  int32_t getLine(std::istream&, std::vector<int32_t>&, std::vector<int32_t>&, std::vector<int32_t>&, std::minstd_rand&, int32_t flags = 0)
+    const;
   std::vector<int64_t> getInvalidWords() {
     return invalid_;
   }

@@ -21,6 +21,7 @@ void printUsage() {
       << "usage: fasttext <command> <args>\n\n"
       << "The commands supported by fasttext are:\n\n"
       << "  supervised              train a supervised classifier\n"
+      << "  sent2vec                train unsupervised sentence embeddings\n"
       << "  quantize                quantize a model to reduce the memory "
          "usage\n"
       << "  test                    evaluate a supervised classifier\n"
@@ -33,6 +34,7 @@ void printUsage() {
 		 "probabilities and also outputs input words\n"
       << "  skipgram                train a skipgram model\n"
       << "  cbow                    train a cbow model\n"
+      << "  pvdm                    train a pvdm model\n"
       << "  print-word-vectors      print word vectors given a trained model\n"
       << "  print-sentence-vectors  print sentence vectors given a trained "
          "model\n"
@@ -436,7 +438,9 @@ void train(const std::vector<std::string> args) {
     fasttext->train(a);
   }
   fasttext->saveModel(outputFileName);
-  fasttext->saveVectors(a.output + ".vec");
+  if (a.saveVectors) {
+    fasttext->saveVectors(a.output + ".vec");
+  }
   if (a.saveOutput) {
     fasttext->saveOutput(a.output + ".output");
   }
@@ -482,7 +486,7 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
   std::string command(args[1]);
-  if (command == "skipgram" || command == "cbow" || command == "supervised") {
+  if (command == "skipgram" || command == "cbow" || command == "supervised" || command == "sent2vec" || command == "pvdm") {
     train(args);
   } else if (command == "test" || command == "test-label") {
     test(args);

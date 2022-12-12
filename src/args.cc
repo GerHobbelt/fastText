@@ -21,6 +21,7 @@ Args::Args() {
   lr = 0.05;
   dim = 100;
   ws = 5;
+  dropoutK = 0;
   epoch = 5;
   minCount = 5;
   minCountLabel = 0;
@@ -37,8 +38,11 @@ Args::Args() {
   label = "__label__";
   verbose = 2;
   pretrainedVectors = "";
+  pretrainedModel = "";
   saveOutput = false;
+  saveVectors = false;
   seed = 0;
+  discardOovWords = false;
 
   qout = false;
   retrain = false;
@@ -83,6 +87,10 @@ std::string Args::modelToString(model_name mn) const {
       return "sg";
     case model_name::sup:
       return "sup";
+    case model_name::sent2vec:
+      return "sent2vec";
+    case model_name::pvdm:
+      return "pvdm";
   }
   return "Unknown model name!"; // should never happen
 }
@@ -114,8 +122,19 @@ void Args::parseArgs(const std::vector<std::string>& args) {
     minn = 0;
     maxn = 0;
     lr = 0.1;
+  } else if (command == "sent2vec") {
+    model = model_name::sent2vec;
+    loss = loss_name::ns;
+    neg = 10;
+    minCount = 5;
+    minn = 0;
+    maxn = 0;
+    lr = 0.2;
+    dropoutK = 2;
   } else if (command == "cbow") {
     model = model_name::cbow;
+  } else if (command == "pvdm") {
+    model = model_name::pvdm;
   }
   for (int ai = 2; ai < args.size(); ai += 2) {
     if (args[ai][0] != '-') {
@@ -150,6 +169,8 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         minCountLabel = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-neg") {
         neg = std::stoi(args.at(ai + 1));
+      } else if (args[ai] == "-dropoutK") {
+        dropoutK = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-wordNgrams") {
         wordNgrams = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-loss") {
@@ -183,11 +204,19 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         verbose = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-pretrainedVectors") {
         pretrainedVectors = std::string(args.at(ai + 1));
+      } else if (args[ai] == "-pretrainedModel") {
+        pretrainedModel = std::string(args.at(ai + 1));
+      } else if (args[ai] == "-discardOovWords") {
+        discardOovWords = true;
+        ai--;
       } else if (args[ai] == "-saveOutput") {
         saveOutput = true;
         ai--;
       } else if (args[ai] == "-seed") {
         seed = std::stoi(args.at(ai + 1));
+      } else if (args[ai] == "-saveVectors") {
+        saveVectors = true;
+        ai--;
       } else if (args[ai] == "-qnorm") {
         qnorm = true;
         ai--;
@@ -269,7 +298,8 @@ void Args::printDictionaryHelp() {
             << "  -maxn               max length of char ngram [" << maxn
             << "]\n"
             << "  -t                  sampling threshold [" << t << "]\n"
-            << "  -label              labels prefix [" << label << "]\n";
+            << "  -label              labels prefix [" << label << "]\n"
+            << "  -dropoutK           number of ngrams dropped [" << dropoutK << "]\n";
 }
 
 void Args::printTrainingHelp() {
@@ -291,8 +321,14 @@ void Args::printTrainingHelp() {
       << "  -pretrainedVectors  pretrained word vectors for supervised "
          "learning ["
       << pretrainedVectors << "]\n"
+      << "  -pretrainedModel    pretrained model ["
+      << pretrainedModel << "]\n"
+      << "  -discardOovWords    whether to discard OOV words from the pre-trained model ["
+      << boolToString(discardOovWords) << "]\n"
       << "  -saveOutput         whether output params should be saved ["
       << boolToString(saveOutput) << "]\n"
+      << "  -saveVectors        whether vectors should be saved ["
+      << boolToString(saveVectors) << "]\n"
       << "  -seed               random generator seed  [" << seed << "]\n";
 }
 

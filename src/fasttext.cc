@@ -106,7 +106,7 @@ int32_t FastText::getWordId(const std::string& word) const {
 
 int32_t FastText::getSubwordId(const std::string& subword) const {
   int32_t h = dict_->hash(subword) % args_->bucket;
-  return dict_->nwords() + h;
+  return dict_->nwords() + dict_->nlabels() + h;
 }
 
 int32_t FastText::getLabelId(const std::string& label) const {
@@ -131,7 +131,7 @@ void FastText::getWordVector(Vector& vec, const std::string& word) const {
 void FastText::getSubwordVector(Vector& vec, const std::string& subword) const {
   vec.zero();
   int32_t h = dict_->hash(subword) % args_->bucket;
-  h = h + dict_->nwords();
+  h = h + dict_->nwords() + dict_->nlabels();
   addInputVector(vec, h);
 }
 
@@ -456,6 +456,33 @@ void FastText::supervised(
   }
 }
 
+void FastText::sent2vec(
+    Model::State& state, 
+    real lr, 
+    const std::vector<int32_t>& line, 
+    const std::vector<int32_t>& hashes) {
+  if (line.size() <= 1) return;
+  std::vector<int32_t> bow, boh;
+  std::uniform_real_distribution<> uniform(0, 1);
+  for (int32_t w = 0; w < line.size(); w++) {
+    // once per iteration discard rare or random target words
+    if (dict_->discard(line[w], uniform(state.rng)) || dict_->getTokenCount(line[w]) < args_->minCountLabel)
+      continue;
+    bow = line;
+    boh = hashes;
+    // set target word to <PLACEHOLDER>
+    bow[w] = 0;
+    boh[w] = 0;
+    // original impl uses word id for ngrams instead of token hash
+    if (args_->dropoutK) {
+      dict_->addWordNgrams(bow, boh, args_->wordNgrams, args_->dropoutK, state.rng);
+    } else {
+      dict_->addWordNgrams(bow, boh, args_->wordNgrams);
+    }
+    model_->update(bow, line, w, lr, state);
+  }
+}
+
 void FastText::cbow(
     Model::State& state,
     real lr,
@@ -488,6 +515,36 @@ void FastText::skipgram(
         model_->update(ngrams, line, w + c, lr, state);
       }
     }
+  }
+}
+
+void FastText::pvdm(
+    Model::State& state, 
+    real lr,
+    const std::vector<int32_t>& line,
+    const std::vector<int32_t>& hashes,
+    const std::vector<int32_t>& labels) {
+  if (line.size() == 0) return;
+  std::vector<int32_t> bow, boh;
+  std::uniform_int_distribution<> uniform(1, args_->ws);
+  std::uniform_int_distribution<> uniformLabels(0, labels.size() - 1);
+  for (int32_t w = 0; w < line.size(); w++) {
+    int32_t boundary = uniform(state.rng);
+    bow.clear();
+    boh.clear();
+    for (int32_t c = -boundary; c <= boundary; c++) {
+      if (c != 0 && w + c >= 0 && w + c < line.size()) {
+        const std::vector<int32_t>& ngrams = dict_->getSubwords(line[w + c]);
+        bow.insert(bow.end(), ngrams.cbegin(), ngrams.cend());
+        boh.insert(boh.end(), hashes[w + c]);
+      }
+    }
+    dict_->addWordNgrams(bow, boh, args_->wordNgrams);
+    if (labels.size() > 0) {
+      int32_t i = uniformLabels(state.rng);
+      bow.insert(bow.end(), labels[i]);
+    }
+    model_->update(bow, line, w, lr, state);
   }
 }
 
@@ -582,7 +639,7 @@ bool FastText::predictLine(
   predict(k, words, linePredictions, threshold);
   for (const auto& p : linePredictions) {
     predictions.push_back(
-        std::make_pair(std::exp(p.first), dict_->getLabel(p.second)));
+        std::make_pair(std::exp(p.first), dict_->getLabel(p.second - dict_->nwords())));
   }
 
   return true;
@@ -738,7 +795,7 @@ void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
 
   const int64_t ntokens = dict_->ntokens();
   int64_t localTokenCount = 0;
-  std::vector<int32_t> line, labels;
+  std::vector<int32_t> line, labels, hashes;
   uint64_t callbackCounter = 0;
   try {
     while (keepTraining(ntokens)) {
@@ -754,13 +811,22 @@ void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
       real lr = args_->lr * (1.0 - progress);
       if (args_->model == model_name::sup) {
         localTokenCount += dict_->getLine(ifs, line, labels);
+        for (auto it = labels.begin(); it != labels.end(); ++it) {
+          *it -= dict_->nwords();
+        }
         supervised(state, lr, line, labels);
+      } else if (args_->model == model_name::sent2vec) {
+        localTokenCount += dict_->getLine(ifs, line, hashes, labels, state.rng, Dictionary::SKIP_EOS | Dictionary::SKIP_LNG | Dictionary::SKIP_OOV);
+        sent2vec(state, lr, line, hashes);
       } else if (args_->model == model_name::cbow) {
         localTokenCount += dict_->getLine(ifs, line, state.rng);
         cbow(state, lr, line);
       } else if (args_->model == model_name::sg) {
         localTokenCount += dict_->getLine(ifs, line, state.rng);
         skipgram(state, lr, line);
+      } else if (args_->model == model_name::pvdm) {
+        localTokenCount += dict_->getLine(ifs, line, hashes, labels, state.rng, Dictionary::SKIP_EOS | Dictionary::SKIP_LNG | Dictionary::SKIP_OOV | Dictionary::SKIP_FRQ);
+        pvdm(state, lr, line, hashes, labels);
       }
       if (localTokenCount > args_->lrUpdateRate) {
         tokenCount_ += localTokenCount;
@@ -808,7 +874,7 @@ std::shared_ptr<Matrix> FastText::getInputMatrixFromFile(
   dict_->threshold(1, 0);
   dict_->init();
   std::shared_ptr<DenseMatrix> input = std::make_shared<DenseMatrix>(
-      dict_->nwords() + args_->bucket, args_->dim);
+      dict_->nwords() + dict_->nlabels() + args_->bucket, args_->dim);
   input->uniform(1.0 / args_->dim, args_->thread, args_->seed);
 
   for (size_t i = 0; i < n; i++) {
@@ -825,7 +891,7 @@ std::shared_ptr<Matrix> FastText::getInputMatrixFromFile(
 
 std::shared_ptr<Matrix> FastText::createRandomMatrix() const {
   std::shared_ptr<DenseMatrix> input = std::make_shared<DenseMatrix>(
-      dict_->nwords() + args_->bucket, args_->dim);
+      dict_->nwords() + dict_->nlabels() + args_->bucket, args_->dim);
   input->uniform(1.0 / args_->dim, args_->thread, args_->seed);
 
   return input;
@@ -833,7 +899,7 @@ std::shared_ptr<Matrix> FastText::createRandomMatrix() const {
 
 std::shared_ptr<Matrix> FastText::createTrainOutputMatrix() const {
   int64_t m =
-      (args_->model == model_name::sup) ? dict_->nlabels() : dict_->nwords();
+      (args_->model == model_name::sup) ? dict_->nlabels() : dict_->nwords() + dict_->nlabels();
   std::shared_ptr<DenseMatrix> output =
       std::make_shared<DenseMatrix>(m, args_->dim);
   output->zero();
@@ -856,15 +922,43 @@ void FastText::train(const Args& args, const TrainCallback& callback) {
   dict_->readFromFile(ifs);
   ifs.close();
 
-  if (!args_->pretrainedVectors.empty()) {
-    input_ = getInputMatrixFromFile(args_->pretrainedVectors);
-  } else {
+  if (!args_->pretrainedModel.empty()) {
+    FastText pretrained;
+    pretrained.loadModel(args_->pretrainedModel);
+    if (pretrained.args_->dim != args_->dim) {
+      throw std::invalid_argument(
+          "Dimension of pretrained model (" + std::to_string(pretrained.args_->dim) +
+          ") does not match dimension (" + std::to_string(args_->dim) + ")!");
+    }
+    if (pretrained.args_->model == model_name::sup) {
+        throw std::invalid_argument(
+            "Supervised models cannot be used as pretrained models");
+    }
+    
+    dict_->update(pretrained.dict_, args_->discardOovWords);
+    
     input_ = createRandomMatrix();
+    output_ = createTrainOutputMatrix();
+    
+    for (int32_t i = 0; i < pretrained.dict_->nwords(); i++) {
+      int32_t k = dict_->getId(pretrained.dict_->getWord(i));
+      if (k >= 0 && k < dict_->nwords()) {
+        pretrained.input_->setRowToMatrix(i, *input_, k);
+      }
+    }
+  } else {
+    if (!args_->pretrainedVectors.empty()) {
+      input_ = getInputMatrixFromFile(args_->pretrainedVectors);
+      output_ = createTrainOutputMatrix();
+    } else {
+      input_ = createRandomMatrix();
+      output_ = createTrainOutputMatrix();
+    }
   }
-  output_ = createTrainOutputMatrix();
+
   quant_ = false;
   auto loss = createLoss(output_);
-  bool normalizeGradient = (args_->model == model_name::sup);
+  bool normalizeGradient = (args_->model == model_name::sup || args_->model == model_name::sent2vec);
   model_ = std::make_shared<Model>(input_, output_, loss, normalizeGradient);
   startThreads(callback);
 }

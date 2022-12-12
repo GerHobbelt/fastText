@@ -162,6 +162,12 @@ std::string Dictionary::getWord(int32_t id) const {
   return words_[id].word;
 }
 
+int64_t Dictionary::getTokenCount(int32_t id) const {
+  assert(id >= 0);
+  assert(id < size_);
+  return words_[id].count;
+}
+
 // The correct implementation of fnv should be:
 // h = h ^ uint32_t(uint8_t(str[i]));
 // Unfortunately, earlier version of fasttext used
@@ -241,6 +247,48 @@ bool Dictionary::readWord(std::istream& in, std::string& word) const {
   return !word.empty();
 }
 
+void Dictionary::update(std::shared_ptr<Dictionary> dict, bool discardOovWords) {
+  int32_t updated = 0, added = 0;
+
+  /* Do not increment ntokens_ as it is used for the epoch calculation.
+   * Do not alter the discard table by updating word counts.
+   * Rare words are discarded less frequently and never if count=1.
+   */
+  for (int32_t i = 0; i < dict->nwords_; i++) {
+    const std::string& w = dict->words_[i].word;
+    int32_t h = find(w);
+    if (word2int_[h] == -1) {
+      if (!discardOovWords) {
+        entry e;
+        e.word = w;
+        e.count = 1;
+        e.type = getType(w);
+        words_.push_back(e);
+        word2int_[h] = size_++;
+        added++;
+      }
+    } else {
+      updated++;
+    }
+  }
+  
+  if (args_->model == model_name::sent2vec) {
+    assert(words_[0].word == "<PLACEHOLDER>");
+    words_[0].count = 1e+18;
+  }
+  
+  threshold(1, 0);
+  initTableDiscard();
+  initNgrams();
+
+  if (args_->model == model_name::sent2vec) {
+    assert(words_[0].word == "<PLACEHOLDER>");
+    words_[0].count = 0;
+  }
+  
+  std::cerr << "Pretrained words: " << updated << " updated, " << added << " added" << std::endl;
+}
+
 void Dictionary::readFromFile(std::istream& in) {
   std::string word;
   int64_t minThreshold = 1;
@@ -254,9 +302,26 @@ void Dictionary::readFromFile(std::istream& in) {
       threshold(minThreshold, minThreshold);
     }
   }
+
+  if (args_->model == model_name::sent2vec) {
+    int32_t h = find("<PLACEHOLDER>");
+    entry e;
+    e.word = "<PLACEHOLDER>";
+    e.count = 1e+18;
+    e.type = entry_type::word;
+    words_.push_back(e);
+    word2int_[h] = size_++;
+  }
+
   threshold(args_->minCount, args_->minCountLabel);
   initTableDiscard();
   initNgrams();
+
+  if (args_->model == model_name::sent2vec) {
+    assert(words_[0].word == "<PLACEHOLDER>");
+    words_[0].count = 0;
+  }
+
   if (args_->verbose > 0) {
     std::cerr << "\rRead " << ntokens_ / 1000000 << "M words" << std::endl;
     std::cerr << "Number of words:  " << nwords_ << std::endl;
@@ -326,6 +391,35 @@ void Dictionary::addWordNgrams(
   for (int32_t i = 0; i < hashes.size(); i++) {
     uint64_t h = hashes[i];
     for (int32_t j = i + 1; j < hashes.size() && j < i + n; j++) {
+      h = h * 116049371 + hashes[j];
+      pushHash(line, h % args_->bucket);
+    }
+  }
+}
+
+void Dictionary::addWordNgrams(
+    std::vector<int32_t>& line,
+    const std::vector<int32_t>& hashes,
+    int32_t n, 
+    int32_t k, 
+    std::minstd_rand& rng) const {
+  int32_t num_discarded = 0;
+  std::vector<bool> discard;
+  const int32_t size = hashes.size(); 
+  discard.resize(size, false);
+  std::uniform_int_distribution<> uniform(1, size);
+  while (num_discarded < k && size - num_discarded > 2) {
+    int32_t token_to_discard = uniform(rng);
+    if (!discard[token_to_discard]) {
+      discard[token_to_discard] = true;
+      num_discarded++;
+    }
+  }
+  for (int32_t i = 0; i < size; i++) {
+    if (discard[i]) continue;
+    uint64_t h = hashes[i];
+    for (int32_t j = i + 1; j < size && j < i + n; j++) {
+      if (discard[j]) break;
       h = h * 116049371 + hashes[j];
       pushHash(line, h % args_->bucket);
     }
@@ -406,13 +500,67 @@ int32_t Dictionary::getLine(
       addSubwords(words, token, wid);
       word_hashes.push_back(h);
     } else if (type == entry_type::label && wid >= 0) {
-      labels.push_back(wid - nwords_);
+      labels.push_back(wid);
     }
     if (token == EOS) {
       break;
     }
   }
   addWordNgrams(words, word_hashes, args_->wordNgrams);
+  return ntokens;
+}
+
+int32_t Dictionary::getLine(
+    std::istream& in,
+    std::vector<int32_t>& words,
+    std::vector<int32_t>& word_hashes,
+    std::vector<int32_t>& labels,
+    std::minstd_rand& rng,
+    int32_t flags) const {
+  std::uniform_real_distribution<> uniform(0, 1);
+  std::string token;
+  int32_t ntokens = 0;
+
+  reset(in);
+  words.clear();
+  word_hashes.clear();
+  labels.clear();
+  while (readWord(in, token)) {
+    if (flags & SKIP_EOS) {
+      if (token == EOS) {
+        break;
+      }
+    }
+    uint32_t h = hash(token);
+    int32_t wid = getId(token, h);
+    if (flags & SKIP_OOV) {
+      if (wid < 0) {
+        continue;
+      }
+    }
+    entry_type type = wid < 0 ? getType(token) : getType(wid);
+
+    ntokens++;
+    if (type == entry_type::word) {
+      if (flags & SKIP_FRQ) {
+        if (discard(wid, uniform(rng))) {
+          continue;
+        }
+      }
+      words.push_back(wid);
+      word_hashes.push_back(h);
+    } else if (type == entry_type::label && wid >= 0) {
+      labels.push_back(wid);
+    }
+    if (flags & SKIP_LNG) {
+      if (ntokens > MAX_LINE_SIZE) {
+        break;
+      }
+    }
+    if (token == EOS) {
+       break;
+    }
+  }
   return ntokens;
 }
 
@@ -460,7 +608,7 @@ void Dictionary::pushHash(std::vector<int32_t>& hashes, int32_t id) const {
       return;
     }
   }
-  hashes.push_back(nwords_ + id);
+  hashes.push_back(nwords_ + nlabels_ + id);
 }
 
 std::string Dictionary::getLabel(int32_t lid) const {
@@ -615,7 +763,7 @@ void Dictionary::clip(int32_t max_size, std::shared_ptr<Language> lang) {
 void Dictionary::prune(std::vector<int32_t>& idx) {
   std::vector<int32_t> words, ngrams;
   for (auto it = idx.cbegin(); it != idx.cend(); ++it) {
-    if (*it < nwords_) {
+    if (*it < nwords_ + nlabels_) {
       words.push_back(*it);
     } else {
       ngrams.push_back(*it);
@@ -627,7 +775,7 @@ void Dictionary::prune(std::vector<int32_t>& idx) {
   if (ngrams.size() != 0) {
     int32_t j = 0;
     for (const auto ngram : ngrams) {
-      pruneidx_[ngram - nwords_] = j;
+      pruneidx_[ngram - nwords_ - nlabels_] = j;
       j++;
     }
     idx.insert(idx.end(), ngrams.begin(), ngrams.end());
