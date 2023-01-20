@@ -129,7 +129,7 @@ namespace fasttext {
     }
 
     bool Language::isWeb(const std::string word) {
-        return std::regex_match(word, std::regex("^(https?:\/\/)?([\da-z-]+\\.)+([a-z\\.]{2,6})([\/\w \\.-]*)*\/?$", std::regex_constants::icase));
+        return std::regex_match(word, std::regex("^(https?://)?([\\da-z-]+\\.)+([a-z\\.]{2,6})([/\\w \\.-]*)*/?$", std::regex_constants::icase));
     }
 
     bool Language::isUUID(const std::string word) {
