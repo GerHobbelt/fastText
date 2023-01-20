@@ -45,7 +45,7 @@ class Language {
     // STRICT_PUNCT is forbidden at the beginning and end of the word
     const std::unordered_set<std::string> STRICT_PUNCT{"&", "-"};
     // PUNCT is forbidden anywhere inside the word
-    const std::vector<char*> PUNCT = {"!", "\"", "#", "$", "%", "\\", "'", "(", ")", "*", "+", ",", ".", "/", ":", ";", "<", "=", ">", "?", "@", "[", "]", "^", "_", "`", "{", "|", "}", "~"};
+    const std::vector<const char*> PUNCT = {"!", "\"", "#", "$", "%", "\\", "'", "(", ")", "*", "+", ",", ".", "/", ":", ";", "<", "=", ">", "?", "@", "[", "]", "^", "_", "`", "{", "|", "}", "~"};
 
  protected:
     lang lang_;
