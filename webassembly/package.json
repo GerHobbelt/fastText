@@ -1,6 +1,6 @@
 {
   "name": "@rafaelkallis/fasttext",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Node wrapper for Facebook's fastText",
   "author": "Rafael Kallis <rk@rafaelkallis.com",
   "license": "AGPL-3.0",
@@ -9,7 +9,8 @@
   "files": [
     "fasttext_node.js",
     "fasttext_wasm.js",
-    "fasttext_wasm.wasm"
+    "fasttext_wasm.wasm",
+    "fasttext_node.d.ts"
   ],
   "repository": "github:rafaelkallis/fastText.git",
   "scripts": {
