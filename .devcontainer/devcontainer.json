@@ -3,7 +3,7 @@
   "features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:1": {},
 		"ghcr.io/devcontainers/features/node:1": {
-			"version": "18"
+			"version": "16"
 		},
 		"ghcr.io/devcontainers/features/python:1": {}
   },
