@@ -9,17 +9,17 @@ jobs:
   build_linux:
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/checkout@v1
-      - uses: olegtarasov/get-tag@v2.1
-      - uses: nuget/setup-nuget@v1
+      - uses: actions/checkout@v4
+      - uses: olegtarasov/get-tag@v2.1.3
+      - uses: nuget/setup-nuget@v2
       - name: Build
         run: |
           mkdir build
           cd build
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --config Release --target fasttext-shared fasttext-api-test
-      # - name: Run tests
-      #   run: ./build/fasttext-test
+      - name: Run tests
+        run: ./build/fasttext-test
       - name: Make Nuget package
         env:
           APITOKEN: ${{ secrets.NugetToken }}
@@ -31,17 +31,17 @@ jobs:
   build_macos:
     runs-on: macOS-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: olegtarasov/get-tag@v2.1
-      - uses: nuget/setup-nuget@v1
+      - uses: actions/checkout@v4
+      - uses: olegtarasov/get-tag@v2.1.3
+      - uses: nuget/setup-nuget@v2
       - name: Build
         run: |
           mkdir build
           cd build
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --config Release --target fasttext-shared fasttext-api-test
-      # - name: Run tests
-      #   run: ./build/fasttext-test
+      - name: Run tests
+        run: ./build/fasttext-test
       - name: Make Nuget package
         env:
           APITOKEN: ${{ secrets.NugetToken }}
@@ -53,17 +53,17 @@ jobs:
   build_windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: olegtarasov/get-tag@v2.1
-      - uses: nuget/setup-nuget@v1
+      - uses: actions/checkout@v4
+      - uses: olegtarasov/get-tag@v2.1.3
+      - uses: nuget/setup-nuget@v2
       - name: Build
         run: |
           mkdir build
           cd build
           cmake -DCMAKE_GENERATOR_PLATFORM=x64 ..
           cmake --build . --config Release --target fasttext-shared fasttext-api-test
-      # - name: Run tests
-      #   run: .\build\Release\fasttext-test.exe
+      - name: Run tests
+        run: .\build\Release\fasttext-test.exe
       - name: Make Nuget package
         env:
           APITOKEN: ${{ secrets.NugetToken }}
