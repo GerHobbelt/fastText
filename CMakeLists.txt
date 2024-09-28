@@ -9,6 +9,8 @@
 cmake_minimum_required(VERSION 3.20.0)
 project(fasttext)
 
+set(CMAKE_CXX_STANDARD 17)
+
 # The version number.
 set (fasttext_VERSION_MAJOR 0)
 set (fasttext_VERSION_MINOR 1)
@@ -18,7 +20,7 @@ include_directories(fasttext)
 if (MSVC)
     set(CMAKE_CXX_FLAGS " /O2 /DFASTTEXT_EXPORTS /DWIN32 /EHsc /wd4244 /wd4267")
 else()
-    set(CMAKE_CXX_FLAGS " -pthread -std=c++11 -funroll-loops -O3 -DFASTTEXT_EXPORTS")
+    set(CMAKE_CXX_FLAGS " -pthread -std=c++17 -funroll-loops -O3 -DFASTTEXT_EXPORTS")
 endif()
 
 set(HEADER_FILES
