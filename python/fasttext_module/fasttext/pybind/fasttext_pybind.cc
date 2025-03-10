@@ -26,9 +26,12 @@ typedef SSIZE_T ssize_t;
 #include <sstream>
 #include <stdexcept>
 
+//https://github.com/facebookresearch/fastText/pull/1279/files
+//https://github.com/facebookresearch/fastText/pull/1352/files
+
 #if defined(_MSC_VER)
 #include <BaseTsd.h>
-typedef SSIZE_T ssize_t;
+   typedef SSIZE_T ssize_t;
 #endif
 
 using namespace pybind11::literals;
@@ -133,6 +136,7 @@ PYBIND11_MODULE(fasttext_pybind, m) {
       .def_readwrite("verbose", &fasttext::Args::verbose)
       .def_readwrite("pretrainedVectors", &fasttext::Args::pretrainedVectors)
       .def_readwrite("saveOutput", &fasttext::Args::saveOutput)
+      .def_readwrite("noSaveVectors", &fasttext::Args::noSaveVectors)
       .def_readwrite("seed", &fasttext::Args::seed)
 
       .def_readwrite("qout", &fasttext::Args::qout)
@@ -542,6 +546,13 @@ PYBIND11_MODULE(fasttext_pybind, m) {
              int32_t k,
              const char* onUnicodeError) {
             return castToPythonString(m.getNN(word, k), onUnicodeError);
+          })
+      .def(
+          "getSimilarity",
+          [](fasttext::FastText& m,
+            const std::string& word1,
+            const std::string& word2) {
+            return m.getSimilarity(word1, word2);
           })
       .def(
           "getAnalogies",

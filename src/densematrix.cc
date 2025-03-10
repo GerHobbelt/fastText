@@ -155,6 +155,18 @@ void DenseMatrix::setRowToMatrix(int64_t i, Matrix& A, int64_t k) {
   A.setVectorToRow(v, k);
 }
 
+real DenseMatrix::dotTwoVecs(const Vector& vec1, const Vector& vec2) const {
+  assert(vec1.size() == n_);
+  real d = 0.0;
+  for (int64_t j = 0; j < n_; j++) {
+    d += vec1[j] * vec2[j];
+  }
+  if (std::isnan(d)) {
+    throw EncounteredNaNError();
+  }
+  return d;
+}
+
 void DenseMatrix::setVectorToRow(const Vector& vec, int64_t i) {
   assert(i >= 0);
   assert(i < m_);

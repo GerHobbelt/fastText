@@ -21,6 +21,9 @@ if (NOT MSVC)
     set(CMAKE_CXX_FLAGS " -pthread -std=c++17 -funroll-loops -O3 -march=native")
 endif()
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 set(HEADER_FILES
     src/args.h
     src/autotune.h
@@ -76,6 +79,14 @@ function(add_fasttext_exe suffix)
   add_library(fasttext-static${suffix} STATIC ${SOURCE_FILES} ${HEADER_FILES})
   set_target_properties(fasttext-static${suffix} PROPERTIES OUTPUT_NAME fasttext${suffix})
   add_executable(fasttext-bin${suffix} src/main.cc)
+
+if (MSVC)
+   SET(CMAKE_EXE_LINKER_FLAGS "-pthread")
+   target_link_libraries(fasttext-bin fasttext-static)
+else()
+   target_link_libraries(fasttext-bin pthread fasttext-static)
+endif()
+
   target_link_libraries(fasttext-bin${suffix} pthread fasttext-static${suffix})
   set_target_properties(fasttext-bin${suffix} PROPERTIES PUBLIC_HEADER "${HEADER_FILES}" OUTPUT_NAME fasttext${suffix})
 

@@ -105,6 +105,7 @@ class DenseMatrix : public Matrix {
   void filterRows(const std::vector<int64_t>) override;
   void setRowToMatrix(int64_t, Matrix&, int64_t) override;
   void setVectorToRow(const Vector&, int64_t) override;
+  real dotTwoVecs(const Vector&, const Vector&) const;
   void addVectorToRow(const Vector&, int64_t, real) override;
   void addRowToVector(Vector& x, int32_t i) const override;
   void addRowToVector(Vector& x, int32_t i, real a) const override;

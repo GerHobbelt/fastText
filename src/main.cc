@@ -157,7 +157,7 @@ void test(const std::vector<std::string>& args) {
   const auto& model = args[2];
   const auto& input = args[3];
   int32_t k = args.size() > 4 ? std::stoi(args[4]) : 1;
-  real threshold = args.size() > 5 ? std::stof(args[5]) : 0.0;
+  real threshold = args.size() > 5 ? std::stof(args[5]) : 0.f;
 
   FastText fasttext;
   fasttext.loadModel(model);
