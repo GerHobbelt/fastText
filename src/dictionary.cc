@@ -976,6 +976,51 @@ int32_t Dictionary::getLineTokens(
 	words.clear();
 	labels.clear();
 	while (readWord(in, token)) {
+    uint32_t h = hash(token);
+    int32_t wid = getId(token, h);
+    entry_type type = wid < 0 ? getType(token) : getType(wid);
+
+    ntokens++;
+    if (type == entry_type::word) {
+      addSubwords(words, token, wid);
+      word_hashes.push_back(h);
+    } else if (type == entry_type::label && wid >= 0) {
+      labels.push_back(wid - nwords_);
+    }
+    if (token == EOS) {
+      break;
+    }
+  }
+  addWordNgrams(words, word_hashes, args_->wordNgrams);
+  return ntokens;
+}
+
+namespace {
+bool readWordNoNewline(std::string_view& in, std::string_view& word) {
+  const std::string_view spaces(" \n\r\t\v\f\0");
+  std::string_view::size_type begin = in.find_first_not_of(spaces);
+  if (begin == std::string_view::npos) {
+    in.remove_prefix(in.size());
+    return false;
+  }
+  in.remove_prefix(begin);
+  word = in.substr(0, in.find_first_of(spaces));
+  in.remove_prefix(word.size());
+  return true;
+}
+} // namespace
+
+int32_t Dictionary::getStringNoNewline(
+    std::string_view in,
+    std::vector<int32_t>& words,
+    std::vector<int32_t>& labels) const {
+  std::vector<int32_t> word_hashes;
+  std::string_view token;
+  int32_t ntokens = 0;
+
+  words.clear();
+  labels.clear();
+  while (readWordNoNewline(in, token)) {
 		uint32_t h = hash(token);
 		int32_t wid = getId(token, h);
 		entry_type type = wid < 0 ? getType(token) : getType(wid);
