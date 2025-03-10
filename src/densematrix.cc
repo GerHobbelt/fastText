@@ -14,6 +14,7 @@
 #include <iostream>
 #include <thread>
 #include <utility>
+#include "simd.h"
 #include "utils.h"
 #include "vector.h"
 
@@ -106,10 +107,11 @@ void DenseMatrix::filterRows(std::vector<int64_t> rows) {
  * @param i The i-th row for this matrix which l2-norm will be calculated.
  */
 real DenseMatrix::l2NormRow(int64_t i) const {
-  auto norm = 0.0;
+  /*auto norm = 0.0;
   for (auto j = 0; j < n_; j++) {
     norm += at(i, j) * at(i, j);
-  }
+  }*/
+  auto norm = simd::dotProduct(&at(i, 0), &at(i, 0), size_t(n_));
   if (std::isnan(norm)) {
     throw EncounteredNaNError();
   }
@@ -131,10 +133,12 @@ real DenseMatrix::dotRow(const Vector& vec, int64_t i) const {
   assert(i >= 0);
   assert(i < m_);
   assert(vec.size() == n_);
-  real d = 0.0;
+  /*real d = 0.0;
   for (int64_t j = 0; j < n_; j++) {
     d += at(i, j) * vec[j];
-  }
+  }*/
+  real d = simd::dotProduct(&at(i, 0), vec.data(), size_t(n_));
+
   if (std::isnan(d)) {
     throw EncounteredNaNError();
   }

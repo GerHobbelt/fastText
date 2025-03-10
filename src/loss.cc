@@ -156,12 +156,12 @@ void Loss::findKBest(
     /// `heap` holds top-k possible prediction results, so k is its max 
     /// size, unless the value of log(current_softmax) is larger than the 
     /// least value in `heap`.
-    if (heap.size() == k && std_log(output[i]) < heap.front().first) {
+    if (heap.size() == k && output[i] < heap.front().first) {
       continue;
     }
     /// Push back the new potential prediction results and its correponding 
     /// log(softmax_value).
-    heap.push_back(std::make_pair(std_log(output[i]), i));
+    heap.emplace_back(output[i], i);
     /// Building a heap bsaed on `std::vector` instance and a element comparision 
     /// rule, which will automaticaly relocate the last element we just pushed back 
     /// to an appropriate locate in heap's tree structure, for chinese, can ref to 
@@ -178,6 +178,9 @@ void Loss::findKBest(
     if (heap.size() > k) {
       std::pop_heap(heap.begin(), heap.end(), comparePairs);
       heap.pop_back();
+    }
+    for (auto& item : heap) {
+      item.first = std_log(item.first);
     }
   }
 }
@@ -386,8 +389,17 @@ void HierarchicalSoftmaxLoss::dfs(
   real f = wo_->dotRow(hidden, node - osz_);
   f = 1. / (1 + std::exp(-f));
 
-  dfs(k, threshold, tree_[node].left, score + std_log(1.0 - f), heap, hidden);
-  dfs(k, threshold, tree_[node].right, score + std_log(f), heap, hidden);
+  /*dfs(k, threshold, tree_[node].left, score + std_log(1.0 - f), heap, hidden);
+  dfs(k, threshold, tree_[node].right, score + std_log(f), heap, hidden);*/
+  real score_left = score + log(1.0 - f);
+  real score_right = score + log(f);
+  if (score_left > score_right) {
+	  dfs(k, threshold, tree_[node].left, score_left, heap, hidden);
+	  dfs(k, threshold, tree_[node].right, score_right, heap, hidden);
+  } else {
+	  dfs(k, threshold, tree_[node].right, score_right, heap, hidden);
+	  dfs(k, threshold, tree_[node].left, score_left, heap, hidden);
+  }
 }
 
 SoftmaxLoss::SoftmaxLoss(std::shared_ptr<Matrix>& wo) : Loss(wo) {}

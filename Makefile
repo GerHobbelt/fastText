@@ -7,7 +7,7 @@
 #
 
 CXX = c++
-CXXFLAGS = -pthread -std=c++17 -march=native -Ithird-party/sentencepiece/src -lsentencepiece
+CXXFLAGS = -Wall -pthread -std=c++17 -march=native -march=native -ffast-math -Wsuggest-final-methods -Walloc-zero -Wsuggest-override -Wodr -flto -ftree-loop-linear -floop-strip-mine -floop-block -Ithird-party/sentencepiece/src -lsentencepiece
 OBJS = args.o autotune.o matrix.o dictionary.o language.o loss.o productquantizer.o densematrix.o quantmatrix.o vector.o model.o utils.o meter.o fasttext.o
 INCLUDES = -I.
 
@@ -64,6 +64,9 @@ utils.o: src/utils.cc src/utils.h
 
 meter.o: src/meter.cc src/meter.h
 	$(CXX) $(CXXFLAGS) -c src/meter.cc
+
+simd.o: src/simd.cc src/simd.h
+	$(CXX) $(CXXFLAGS) -c src/simd.cc
 
 fasttext.o: src/fasttext.cc src/*.h
 	$(CXX) $(CXXFLAGS) -c src/fasttext.cc

@@ -14,6 +14,7 @@
 #include <iomanip>
 
 #include "matrix.h"
+#include "simd.h"
 
 namespace fasttext {
 
@@ -24,10 +25,11 @@ void Vector::zero() {
 }
 
 real Vector::norm() const {
-  real sum = 0;
+  /*real sum = 0;
   for (int64_t i = 0; i < size(); i++) {
     sum += data_[i] * data_[i];
-  }
+  }*/
+  real sum = simd::dotProduct(data_.data(), data_.data(), data_.size());
   return std::sqrt(sum);
 }
 
