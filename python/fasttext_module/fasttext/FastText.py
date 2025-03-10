@@ -40,7 +40,7 @@ class _Meter:
         else:
             y_scores, y_true = ([], ())
 
-        return np.array(y_scores, copy=False), np.array(y_true, copy=False)
+        return np.asarray(y_scores), np.asarray(y_true)
 
     def precision_recall_curve(self, label=None):
         """Return precision/recall curve"""
@@ -55,7 +55,7 @@ class _Meter:
         else:
             precision, recall = ([], ())
 
-        return np.array(precision, copy=False), np.array(recall, copy=False)
+        return np.asarray(precision), np.asarray(recall)
 
     def precision_at_recall(self, recall, label=None):
         """Return precision for a given recall"""
@@ -241,7 +241,7 @@ class _FastText:
             else:
                 probs, labels = ([], ())
 
-            return labels, np.array(probs, copy=False)
+            return labels, np.asarray(probs)
 
     def predictWords(self, text, k=1, threshold=0.0, on_unicode_error='strict'):
         """
