@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+namespace {
+
 std::string EOS = "</s>";
 
 bool readWord(std::istream& in, std::string& word)
@@ -40,11 +42,18 @@ bool readWord(std::istream& in, std::string& word)
   return !word.empty();
 }
 
-int main(int argc, char** argv) {
+}
+
+#if defined(BUILD_MONOLITHIC)
+#define main   fasttext_completion_eval_main
+#endif
+
+extern "C"
+int main(int argc, const char** argv) {
   int k = 10;
   if (argc < 4) {
     std::cerr<<"eval <pred> <gt> <kb> [<k>]"<<std::endl;
-    exit(1);
+    return EXIT_FAILURE;
   }
   if (argc == 5) { k = atoi(argv[4]);}
 
@@ -57,7 +66,7 @@ int main(int argc, char** argv) {
 
   if (!predf.is_open() || !gtf.is_open() || !kbf.is_open()) {
     std::cerr << "Files cannot be opened!" << std::endl;
-    exit(EXIT_FAILURE);
+    return EXIT_FAILURE;
   }
 
   std::unordered_map< std::string,
@@ -79,7 +88,7 @@ int main(int argc, char** argv) {
   while (predf.peek() != EOF || gtf.peek() != EOF) {
     if (predf.peek() == EOF || gtf.peek() == EOF) {
       std::cerr<<"pred / gt files have diff sizes"<<std::endl;
-      exit(1);
+	  return EXIT_FAILURE;
     }
     std::string label, key, word;
 
@@ -89,7 +98,8 @@ int main(int argc, char** argv) {
       else {key += "|" + word;}
     }
     if (KB.find(key) == KB.end()) {
-      std::cerr<<"empty key!"<<std::endl; exit(1);
+      std::cerr<<"empty key!"<<std::endl;
+	  return EXIT_FAILURE;
     }
 
     int count = 0;bool eval = true;
@@ -105,4 +115,5 @@ int main(int argc, char** argv) {
   predf.close(); gtf.close();
   std::cout << "N:\t" << nexamples << std::endl;
   std::cout << "R@" << k << "\t" << precision / nexamples << std::endl;
+  return EXIT_SUCCESS;
 }

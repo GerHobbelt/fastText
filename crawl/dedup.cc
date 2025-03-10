@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-uint64_t fnv1a_64(uint8_t *data, size_t sz, uint64_t h=14695981039346656037ull)
+static uint64_t fnv1a_64(uint8_t *data, size_t sz, uint64_t h=14695981039346656037ull)
 {
   for (size_t i = 0; i < sz; i++, data++) {
     h ^= uint64_t(*data);
@@ -19,7 +19,13 @@ uint64_t fnv1a_64(uint8_t *data, size_t sz, uint64_t h=14695981039346656037ull)
   return h;
 }
 
-int main(int argc, char** argv)
+
+#if defined(BUILD_MONOLITHIC)
+#define main   fasttext_dedup_main
+#endif
+
+extern "C"
+int main(int argc, const char** argv)
 {
   uint64_t init_values[] = {
     14695981039346656037ull,

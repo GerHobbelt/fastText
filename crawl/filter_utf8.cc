@@ -8,6 +8,8 @@
 #include <iostream>
 #include <string>
 
+namespace {
+
 // Check that the next n bytes are continuation bytes.
 bool continuation(uint8_t* str, int n)
 {
@@ -93,7 +95,15 @@ bool valid_utf8(uint8_t* str, size_t length)
   return true;
 }
 
-int main(int argc, char** argv)
+}
+
+
+#if defined(BUILD_MONOLITHIC)
+#define main   fasttext_filter_utf8_main
+#endif
+
+extern "C"
+int main(int argc, const char** argv)
 {
   std::ios_base::sync_with_stdio(false);
   for (std::string line; std::getline(std::cin, line);) {
