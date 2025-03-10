@@ -6,7 +6,7 @@
     "examples": "docusaurus-examples"
   },
   "devDependencies": {
-    "docusaurus": "^1.0.0-alpha.35",
+    "docusaurus": "^1.14.7",
     "babel-preset-react": "^6.24.1"
   }
 }

@@ -1,0 +1,15 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: fastText
+  description: |
+    Library for fast text representation and classification.
+  annotations:
+    github.com/project-slug: Tradeshift/fastText
+  tags:
+    - html
+    - javascript
+spec:
+  type: library
+  owner: ml-team
+  lifecycle: production
