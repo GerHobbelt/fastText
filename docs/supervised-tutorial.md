@@ -94,7 +94,7 @@ FUNCTIONS
         as UTF-8. You might want to consult standard preprocessing scripts such
         as tokenizer.perl mentioned here: http://www.statmt.org/wmt07/baseline.html
 
-        The input file must must contain at least one label per line. For an
+        The input file must contain at least one label per line. For an
         example consult the example datasets which are part of the fastText
         repository such as the dataset pulled by classification-example.sh.
 
