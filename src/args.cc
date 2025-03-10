@@ -24,6 +24,7 @@ Args::Args() {
   ws = 5;
   dropoutK = 0;
   epoch = 5;
+  nepoch = -1;
   minCount = 5;
   minCountLabel = 0;
   neg = 5;
@@ -164,6 +165,8 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         exit(EXIT_FAILURE);
       } else if (args[ai] == "-input") {
         input = std::string(args.at(ai + 1));
+      } else if (args[ai] == "-inputModel") {
+        inputModel = std::string(args.at(ai + 1));
       } else if (args[ai] == "-output") {
         output = std::string(args.at(ai + 1));
       } else if (args[ai] == "-lr") {
@@ -176,6 +179,8 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         ws = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-epoch") {
         epoch = std::stoi(args.at(ai + 1));
+      } else if (args[ai] == "-nepoch") {
+        nepoch = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-minCount") {
         minCount = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-minCountLabel") {
@@ -286,6 +291,11 @@ void Args::parseArgs(const std::vector<std::string>& args) {
     printHelp();
     exit(EXIT_FAILURE);
   }
+  if (0 < nepoch && inputModel.empty()) {
+    std::cerr << "Empty input model." << std::endl;
+    printHelp();
+    exit(EXIT_FAILURE);
+  }
   if (wordNgrams <= 1 && maxn == 0 && !hasAutotune()) {
     bucket = 0;
   }
@@ -335,6 +345,7 @@ void Args::printTrainingHelp() {
       << "  -dim                size of word vectors [" << dim << "]\n"
       << "  -ws                 size of the context window [" << ws << "]\n"
       << "  -epoch              number of epochs [" << epoch << "]\n"
+      << "  -nepoch             in incremental training, 0-based epoch index [" << nepoch << "]\n"
       << "  -neg                number of negatives sampled [" << neg << "]\n"
       << "  -loss               loss function {ns, hs, softmax, one-vs-all} ["
       << lossToString(loss) << "]\n"
@@ -355,6 +366,7 @@ void Args::printTrainingHelp() {
       << "  -seed               random generator seed  [" << seed << "]\n"
       << "  -spm                sentencepiece model  [" << spmModel << "]\n"
       << "  -validation         validation file for early stopping  [" << validationFile << "]\n"
+      << "  -inputModel         saved checkpointed model file path (only for incremental training)\n";
       << "  -earlyStop          Stop after number of steps without improvement  [" << earlyStop << "]\n"
       << "  -validateEvery      Number of training steps between validations  [" << validateEvery << "]\n";
 }

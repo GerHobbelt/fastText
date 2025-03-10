@@ -53,6 +53,7 @@ class Args {
   std::string input;
   // for cases when used as library
   std::vector<std::string> vector_input;
+  std::string inputModel;
   std::string output;
   double lr;
   int lrUpdateRate;
@@ -60,6 +61,7 @@ class Args {
   int ws;
   int dropoutK;
   int epoch;
+  int nepoch;
   int minCount;
   int minCountLabel;
   int neg;
