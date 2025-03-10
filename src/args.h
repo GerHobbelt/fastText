@@ -12,6 +12,7 @@
 #include <ostream>
 #include <string>
 #include <unordered_set>
+#include <cstdint>
 #include <vector>
 
 namespace fasttext {
