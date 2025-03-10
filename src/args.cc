@@ -60,6 +60,7 @@ Args::Args() {
 
   validationFile = "";
   earlyStop = 3;
+  intermSaveStep = 0;
   validateEvery = 32768;
 }
 
@@ -262,12 +263,14 @@ void Args::parseArgs(const std::vector<std::string>& args) {
         autotuneDuration = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-autotune-modelsize") {
         autotuneModelSize = std::string(args.at(ai + 1));
+      } else if (args[ai] == "-interm-save-step") {
+        intermSaveStep = std::stoi(args.at(ai+1));
       } else {
         std::cerr << "Unknown argument: " << args[ai] << std::endl;
         printHelp();
         exit(EXIT_FAILURE);
       }
-    } catch (std::out_of_range) {
+    } catch (std::out_of_range&) {
       std::cerr << args[ai] << " is missing an argument" << std::endl;
       printHelp();
       exit(EXIT_FAILURE);

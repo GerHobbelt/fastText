@@ -19,10 +19,6 @@
 
 namespace fasttext {
 
-const std::string Dictionary::EOS = "</s>";
-const std::string Dictionary::BOW = "";
-const std::string Dictionary::EOW = "";
-
 Dictionary::Dictionary(std::shared_ptr<Args> args)
     : args_(args),
       // Initialized `word2int_` as a vector with size as `MAX_VOCAB_SIZE` 
@@ -644,9 +640,9 @@ void Dictionary::addWordNgrams(
     std::vector<int32_t>& line,
     const std::vector<int32_t>& hashes,
     int32_t n) const {
-  for (int32_t i = 0; i < hashes.size(); i++) {
+  for (size_t i = 0; i < hashes.size(); i++) {
     uint64_t h = hashes[i];
-    for (int32_t j = i + 1; j < hashes.size() && j < i + n; j++) {
+    for (size_t j = i + 1; j < hashes.size() && j < i + n; j++) {
       h = h * 116049371 + hashes[j];
       pushHash(line, h % args_->bucket);
     }
@@ -707,9 +703,38 @@ void Dictionary::addSubwords(
 
 void Dictionary::reset(std::istream& in) const {
   if (in.eof()) {
+    std::cerr << "EOF reached (std::istream)" << std::endl;
     in.clear();
     in.seekg(std::streampos(0));
   }
+}
+
+void Dictionary::reset(impl::ArchiveReader& in) const {
+  if (in.eof()) {
+    std::cerr << "EOF reached (impl::ArchiveReader)" << std::endl;
+    in.reset();
+  }
+}
+
+bool Dictionary::getLine_impl(const std::string& token,
+                              int32_t& ntokens,
+                              std::uniform_real_distribution<>& uniform,
+                              std::vector<int32_t>& words,
+                              std::minstd_rand& rng) const {
+  int32_t h = find(token);
+  int32_t wid = word2int_[h];
+  if (wid < 0) {
+    return true;
+  }
+
+  ntokens++;
+  if (getType(wid) == entry_type::word && !discard(wid, uniform(rng))) {
+    words.push_back(wid);
+  }
+  if (ntokens > MAX_LINE_SIZE || token == EOS) {
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -751,31 +776,52 @@ int32_t Dictionary::getLine(
   reset(in);
   words.clear();
   while (readWord(in, token)) {
-    /// Above process 1, `h` is token-id
-    int32_t h = find(token);
-    /// Above process 2, `wid` is token-vocab-index, which is token's 
-    /// corrponding index in token-vocab `Dictionary::words_`.
-    int32_t wid = word2int_[h];
-    if (wid < 0) {
-      continue;
-    }
-
-    /// Incremental counting the processed tokens (not matter duplicated or not) 
-    /// during training process.
-    ntokens++;
-
-    /// Check if current token-vocab-index illegal and if current token hitting 
-    /// discarding condition or random discarding strategy. If not, push current 
-    /// token's token-vocab-index into result holder `words`. 
-    if (getType(wid) == entry_type::word && !discard(wid, uniform(rng))) {
-      words.push_back(wid);
-    }
-    /// Cutting of for some extremet long input token sequences.
-    if (ntokens > MAX_LINE_SIZE || token == EOS) {
+    if (!getLine_impl(token, ntokens, uniform, words, rng)) {
       break;
     }
   }
   return ntokens;
+}
+
+int32_t Dictionary::getLine(
+    impl::ArchiveReader& in,
+    std::vector<int32_t>& words,
+    std::minstd_rand& rng) const {
+  std::uniform_real_distribution<> uniform(0, 1);
+  std::string token;
+  int32_t ntokens = 0;
+
+  reset(in);
+  words.clear();
+  while (readWord(in.stream(), token)) {
+    if (!getLine_impl(token, ntokens, uniform, words, rng)) {
+      break;
+    }
+  }
+  return ntokens;
+}
+
+bool Dictionary::getLine_impl(std::vector<int32_t> word_hashes,
+                              const std::string& token,
+                              int32_t& ntokens,
+                              std::vector<int32_t>& words,
+                              std::vector<int32_t>& labels) const {
+  uint32_t h = hash(token);
+  int32_t wid = getId(token, h);
+  entry_type type = wid < 0 ? getType(token) : getType(wid);
+
+  ntokens++;
+  if (type == entry_type::word) {
+    addSubwords(words, token, wid);
+    word_hashes.push_back(h);
+  } else if (type == entry_type::label && wid >= 0) {
+    labels.push_back(wid - nwords_);
+  }
+  if (token == EOS) {
+    return false;
+  }
+
+  return true;
 }
 
 int32_t Dictionary::getLine(
@@ -790,18 +836,27 @@ int32_t Dictionary::getLine(
   words.clear();
   labels.clear();
   while (readWord(in, token)) {
-    uint32_t h = hash(token);
-    int32_t wid = getId(token, h);
-    entry_type type = wid < 0 ? getType(token) : getType(wid);
-
-    ntokens++;
-    if (type == entry_type::word) {
-      addSubwords(words, token, wid);
-      word_hashes.push_back(h);
-    } else if (type == entry_type::label && wid >= 0) {
-      labels.push_back(wid - nwords_);
+    if (!getLine_impl(word_hashes, token, ntokens, words, labels)) {
+      break;
     }
-    if (token == EOS) {
+  }
+  addWordNgrams(words, word_hashes, args_->wordNgrams);
+  return ntokens;
+}
+
+int32_t Dictionary::getLine(
+    impl::ArchiveReader& in,
+    std::vector<int32_t>& words,
+    std::vector<int32_t>& labels) const {
+  std::vector<int32_t> word_hashes;
+  std::string token;
+  int32_t ntokens = 0;
+
+  reset(in);
+  words.clear();
+  labels.clear();
+  while (readWord(in.stream(), token)) {
+    if (!getLine_impl(word_hashes, token, ntokens, words, labels)) {
       break;
     }
   }
@@ -1146,8 +1201,8 @@ void Dictionary::prune(std::vector<int32_t>& idx) {
 
   std::fill(word2int_.begin(), word2int_.end(), -1);
 
-  int32_t j = 0;
-  for (int32_t i = 0; i < words_.size(); i++) {
+  size_t j = 0;
+  for (size_t i = 0; i < words_.size(); i++) {
     if (getType(i) == entry_type::label ||
         (j < words.size() && words[j] == i)) {
       words_[j] = words_[i];

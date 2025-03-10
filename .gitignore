@@ -1,3 +1,5 @@
+*.sif
+*.kdev4
 .*.swp
 *.o
 *.bin

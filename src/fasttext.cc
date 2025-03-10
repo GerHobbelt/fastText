@@ -21,6 +21,8 @@
 #include <thread>
 #include <vector>
 
+#include "archivereader.h"
+
 namespace fasttext {
 
 constexpr int32_t FASTTEXT_VERSION = 12; /* Version 1b */
@@ -125,7 +127,7 @@ int32_t FastText::getLabelId(const std::string& label) const {
 void FastText::getWordVector(Vector& vec, const std::string& word) const {
   const std::vector<int32_t>& ngrams = dict_->getSubwords(word);
   vec.zero();
-  for (int i = 0; i < ngrams.size(); i++) {
+  for (size_t i = 0; i < ngrams.size(); i++) {
     addInputVector(vec, ngrams[i]);
   }
   if (ngrams.size() > 0) {
@@ -505,7 +507,7 @@ std::vector<int32_t> FastText::selectEmbeddings(int32_t cutoff) const {
   /// Get the id of end-of-sentance sign in embedding loolup table.
   auto eosid = dict_->getId(Dictionary::EOS); /// 'eos' means end-of-sentence.
   /// The following is the embedding-vectors' "magnitude" sorting rule.
-  std::sort(idx.begin(), idx.end(), [&norms, eosid](size_t i1, size_t i2) {
+  std::sort(idx.begin(), idx.end(), [&norms, eosid](int32_t i1, int32_t i2) {
     if (i1 == eosid && i2 == eosid) { // satisfy strict weak ordering
       return false;
     }
@@ -699,10 +701,10 @@ void FastText::skipgram(
     const std::vector<int32_t>& line,
     bool update) {
   std::uniform_int_distribution<> uniform(1, args_->ws);
-  for (int32_t w = 0; w < line.size(); w++) {
-    int32_t boundary = uniform(state.rng);
+  for (size_t w = 0; w < line.size(); w++) {
+    auto boundary = uniform(state.rng);
     const std::vector<int32_t>& ngrams = dict_->getSubwords(line[w]);
-    for (int32_t c = -boundary; c <= boundary; c++) {
+    for (auto c = -boundary; c <= boundary; c++) {
       if (c != 0 && w + c >= 0 && w + c < line.size()) {
         if (update) {
           model_->update(ngrams, line, w + c, lr, state);
@@ -865,7 +867,7 @@ void FastText::getSentenceVector(std::istream& in, fasttext::Vector& svec) {
   if (args_->model == model_name::sup) {
     std::vector<int32_t> line, labels;
     dict_->getLine(in, line, labels);
-    for (int32_t i = 0; i < line.size(); i++) {
+    for (size_t i = 0; i < line.size(); i++) {
       addInputVector(svec, line[i]);
     }
     if (!line.empty()) {
@@ -900,7 +902,7 @@ std::vector<std::pair<std::string, Vector>> FastText::getNgramVectors(
   std::vector<std::string> substrings;
   dict_->getSubwords(word, ngrams, substrings);
   assert(ngrams.size() <= substrings.size());
-  for (int32_t i = 0; i < ngrams.size(); i++) {
+  for (size_t i = 0; i < ngrams.size(); i++) {
     Vector vec(args_->dim);
     if (ngrams[i] >= 0) {
       vec.addRow(*input_, ngrams[i]);
@@ -1129,6 +1131,10 @@ void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
   std::vector<int32_t> line, labels, hashes;
   uint64_t callbackCounter = 0;
   uint64_t validationCounter = 0;
+  bool saveIntermState = (0 == threadId) && (args_->intermSaveStep > 0);
+  real saveStep = real(args_->intermSaveStep) / 100;
+  real saveAt = saveStep;
+
   try {
     while (keepTraining(ntokens)) {
       /// NOTE:
@@ -1164,6 +1170,10 @@ void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
         /// executes `callback` (which is a 
         /// `std::function<void(float, float, double, double, int64_t)>` function).
         callback(progress, loss_, wst, lr, eta);
+      }
+      if (saveIntermState && progress > saveAt) {
+        saveInterm(progress);
+        saveAt += saveStep;
       }
       if (args_->validationFile != "" && threadId == 0 && (validationCounter++ % args_->validateEvery) == 0) {
           //validate(state);
@@ -1212,12 +1222,78 @@ void FastText::trainThread(int32_t threadId, const TrainCallback& callback) {
   ifs.close();
 }
 
+void FastText::trainThreadFromArchive(int32_t threadId, const TrainCallback& callback) {
+  impl::ArchiveReader in(args_->input);
+
+  Model::State state(args_->dim, output_->size(0), threadId + args_->seed);
+
+  const int64_t ntokens = dict_->ntokens();
+  int64_t localTokenCount = 0;
+  std::vector<int32_t> line, labels;
+  uint64_t callbackCounter = 0;
+  bool saveIntermState = (0 == threadId) && (args_->intermSaveStep > 0);
+  real saveStep = real(args_->intermSaveStep) / 100;
+  real saveAt = saveStep;
+
+  try {
+    while (keepTraining(ntokens)) {
+      real progress = real(tokenCount_) / (args_->epoch * ntokens);
+      if (callback && ((callbackCounter++ % 64) == 0)) {
+        double wst;
+        double lr;
+        int64_t eta;
+        std::tie<double, double, int64_t>(wst, lr, eta) =
+            progressInfo(progress);
+        callback(progress, loss_, wst, lr, eta);
+      }
+      if (saveIntermState && progress > saveAt) {
+        saveInterm(progress);
+        saveAt += saveStep;
+      }
+      real lr = args_->lr * (1.0 - progress);
+      if (args_->model == model_name::sup) {
+        localTokenCount += dict_->getLine(in, line, labels);
+        supervised(state, lr, line, labels);
+      } else if (args_->model == model_name::cbow) {
+        localTokenCount += dict_->getLine(in, line, state.rng);
+        cbow(state, lr, line);
+      } else if (args_->model == model_name::sg) {
+        localTokenCount += dict_->getLine(in, line, state.rng);
+        skipgram(state, lr, line);
+      }
+      if (localTokenCount > args_->lrUpdateRate) {
+        tokenCount_ += localTokenCount;
+        localTokenCount = 0;
+        if (threadId == 0 && args_->verbose > 1) {
+          loss_ = state.getLoss();
+        }
+      }
+    }
+  } catch (DenseMatrix::EncounteredNaNError&) {
+    trainException_ = std::current_exception();
+  }
+  if (threadId == 0)
+    loss_ = state.getLoss();
+}
+
+void FastText::saveInterm(real progress) {
+  std::ostringstream ss;
+  auto prev_precision = ss.precision(2);
+  ss << args_->output
+     << "-" << std::fixed << progress
+     << "-loss" << std::setprecision(4) << loss_
+     << ".bin";
+  std::cerr << std::endl << "Saving model at " << progress << std::endl;
+  saveModel(ss.str());
+  ss.precision(prev_precision);
+}
+
 std::shared_ptr<Matrix> FastText::getInputMatrixFromFile(
     const std::string& filename) const {
   std::ifstream in(filename);
   std::vector<std::string> words;
   std::shared_ptr<DenseMatrix> mat; // temp. matrix for pretrained vectors
-  int64_t n, dim;
+  uint64_t n, dim;
   if (!in.is_open()) {
     throw std::invalid_argument(filename + " cannot be opened for loading!");
   }
@@ -1229,12 +1305,12 @@ std::shared_ptr<Matrix> FastText::getInputMatrixFromFile(
   }
   std::cout<< n << " " << dim <<std::endl;
   mat = std::make_shared<DenseMatrix>(n, dim);
-  for (size_t i = 0; i < n; i++) {
+  for (int64_t i = 0; i < n; i++) {
     std::string word;
     in >> word;
     words.push_back(word);
     dict_->add(word);
-    for (size_t j = 0; j < dim; j++) {
+    for (int64_t j = 0; j < dim; j++) {
       in >> mat->at(i, j);
     }
   }
@@ -1247,12 +1323,12 @@ std::shared_ptr<Matrix> FastText::getInputMatrixFromFile(
       dict_->nwords() + dict_->nlabels() + args_->bucket, args_->dim);
   input->uniform(1.0 / args_->dim, args_->thread, args_->seed);
 
-  for (size_t i = 0; i < n; i++) {
+  for (int64_t i = 0; i < n; i++) {
     int32_t idx = dict_->getId(words[i]);
     if (idx < 0 || idx >= dict_->nwords()) {
       continue;
     }
-    for (size_t j = 0; j < dim; j++) {
+    for (int64_t j = 0; j < dim; j++) {
       input->at(idx, j) = mat->at(i, j);
     }
   }
@@ -1314,16 +1390,9 @@ void FastText::train(const Args& args, const TrainCallback& callback) {
           // manage expectations
           throw std::invalid_argument("Cannot use stdin for training!");
       }
-      std::ifstream ifs(args_->input);
-      if (!ifs.is_open()) {
-          throw std::invalid_argument(
-                  args_->input + " cannot be opened for training!");
-      }
-  /// Reading and building vocab from data file, includes building vocab of 
-  /// labels, words and words' char n-gram according several stop-word filtering, 
-  /// id pruning strategies.
-      dict_->readFromFile(ifs);
-      ifs.close();
+  {
+    impl::ArchiveReader in(args_->input);
+    dict_->readFromFile(in.stream());
   } else {
       auto it = args_->vector_input.begin();
       auto end = args_->vector_input.end();
@@ -1411,23 +1480,39 @@ void FastText::startThreads(const TrainCallback& callback) {
   /// will not be blocked and the main program will just go to the while loop 
   /// `while (keepTraining(ntokens))` to continuously print the training log.
   if (args_->thread > 1) {
+    if (utils::endsWith(args_->input, ".xz") || utils::endsWith(args_->input, ".gz")) {
+      throw std::invalid_argument("Cannot use multiple threads with archived input file!");
+    }
+    if (args_->intermSaveStep > 0) {
+      throw std::invalid_argument("Intermediate saving isn't possible with multiple threads.");
+    }
     for (int32_t i = 0; i < args_->thread; i++) {
       /// Iteratively define each thread's training task.
       threads.push_back(std::thread([=]() { trainThread(i, callback); }));
     }
   /// Using single-thread training mode.
   } else {
-    // webassembly can't instantiate `std::thread`
-    trainThread(0, callback);
+    if (utils::endsWith(args_->input, ".xz") || utils::endsWith(args_->input, ".gz")) {
+      if (args_->verbose > 1) {
+        threads.push_back(std::thread([=]() { trainThreadFromArchive(0, callback); }));
+      } else {
+        trainThreadFromArchive(0, callback);
+      }
+    } else {
+      // webassembly can't instantiate `std::thread`
+      trainThread(0, callback);
+    }
   }
   /// Gets total word-token and label token number among full training data, 
   /// this counting includes deuplicates. `dict_->ntokens()` will be calculated 
   /// during `dict_` building. 
   const int64_t ntokens = dict_->ntokens();
+  uint32_t wait_time = 100;
+  uint32_t max_wait_time = (1000 * 60 * 4);
   // Same condition as trainThread
   while (keepTraining(ntokens)) {
     /// TODO: Why `sleep_for`? 
-    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(wait_time));
     /// Printting log. `real(tokenCount_)` represents for now how many tokens 
     /// has been processed by all training threads, `ntokens` represents 
     /// how many tokens (include duplicates) in training data, 
@@ -1441,13 +1526,16 @@ void FastText::startThreads(const TrainCallback& callback) {
       std::cerr << std::endl;
       printInfo(progress, loss_, std::cerr);
     }
+    if (wait_time < max_wait_time) {
+      wait_time = wait_time * 2;
+    }
   }
 
   /// The `join` method make sure even if the above while-loop will be exited 
   /// for some reason while the training threads still not finished, the main 
   /// process will not continuously execute to end which will force unfinished 
   /// training threads exit.
-  for (int32_t i = 0; i < threads.size(); i++) {
+  for (size_t i = 0; i < threads.size(); i++) {
     threads[i].join();
   }
   if (trainException_) {

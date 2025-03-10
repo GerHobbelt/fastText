@@ -72,7 +72,7 @@ fasttext.o: src/fasttext.cc src/*.h
 	$(CXX) $(CXXFLAGS) -c src/fasttext.cc
 
 fasttext: $(OBJS) src/fasttext.cc src/main.cc
-	$(CXX) $(CXXFLAGS) $(OBJS) src/main.cc -o fasttext
+	$(CXX) $(CXXFLAGS) $(OBJS) -lboost_iostreams src/main.cc -o fasttext
 
 clean:
 	rm -rf *.o *.gcno *.gcda fasttext *.bc webassembly/fasttext_wasm.js webassembly/fasttext_wasm.wasm

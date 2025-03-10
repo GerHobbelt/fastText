@@ -67,6 +67,8 @@ class ClockPrint {
 
 bool compareFirstLess(const std::pair<double, double>& l, const double& r);
 
+bool endsWith(const std::string& str, const std::string& suffix);
+
 } // namespace utils
 
 } // namespace fasttext

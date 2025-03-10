@@ -544,7 +544,7 @@ void ProductQuantizer::load(std::istream& in) {
   in.read((char*)&dsub_, sizeof(dsub_));
   in.read((char*)&lastdsub_, sizeof(lastdsub_));
   centroids_.resize(dim_ * ksub_);
-  for (auto i = 0; i < centroids_.size(); i++) {
+  for (size_t i = 0; i < centroids_.size(); i++) {
     in.read((char*)&centroids_[i], sizeof(real));
   }
 }

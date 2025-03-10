@@ -98,6 +98,8 @@ class Args {
   int earlyStop;
   int validateEvery;
 
+  int intermSaveStep;
+
   void parseArgs(const std::vector<std::string>& args);
   void printHelp();
   void printBasicHelp();

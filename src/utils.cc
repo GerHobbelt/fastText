@@ -60,6 +60,14 @@ bool compareFirstLess(const std::pair<double, double>& l, const double& r) {
   return l.first < r;
 }
 
+bool endsWith(const std::string& str, const std::string& suffix) {
+  if (str.size() < suffix.size())
+    return false;
+  if (str.substr(str.size() - suffix.size()) == suffix)
+    return true;
+  return false;
+}
+
 } // namespace utils
 
 } // namespace fasttext

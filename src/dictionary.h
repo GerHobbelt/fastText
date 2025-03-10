@@ -24,6 +24,8 @@
 #include "real.h"
 #include "language.h"
 
+#include "archivereader.h"
+
 namespace fasttext {
 
 class Dictionary {
@@ -36,6 +38,7 @@ class Dictionary {
   void initTableDiscard();
   void initNgrams();
   void reset(std::istream&) const;
+  void reset(impl::ArchiveReader&) const;
   void pushHash(std::vector<int32_t>&, int32_t) const;
   void addSubwords(std::vector<int32_t>&, const std::string_view, int32_t) const;
 
@@ -58,10 +61,23 @@ class Dictionary {
 
   sentencepiece::SentencePieceProcessor processor_;
 
+  inline bool getLine_impl(const std::string& token,
+                           int32_t& ntokens,
+                           std::uniform_real_distribution<>& uniform,
+                           std::vector<int32_t>& words,
+                           std::minstd_rand& rng) const;
+
+  inline bool getLine_impl(std::vector<int32_t> word_hashes,
+                           const std::string& token,
+                           int32_t& ntokens,
+                           std::vector<int32_t>& words,
+                           std::vector<int32_t>& labels) const;
+
  public:
-  static const std::string EOS;
-  static const std::string BOW;
-  static const std::string EOW;
+  constexpr static auto EOS = "</s>";
+  constexpr static auto BOW = "<";
+  constexpr static auto EOW = ">";
+
 
   static const int32_t SKIP_EOS = 0x01;
   static const int32_t SKIP_OOV = 0x02;
@@ -115,10 +131,16 @@ class Dictionary {
   std::vector<int64_t> getCounts(entry_type) const;
   int32_t getLine(std::istream&, std::vector<int32_t>&, std::vector<int32_t>&)
       const;
-  int32_t getLineTokens(std::istream&, std::vector<int32_t>&, std::vector<int32_t>&, std::vector<std::string>&)
-	const;
+  int32_t getLine(impl::ArchiveReader&, std::vector<int32_t>&, std::vector<int32_t>&)
+      const;
   int32_t getLine(std::istream&, std::vector<int32_t>&, std::minstd_rand&)
       const;
+  int32_t getLine(impl::ArchiveReader&, std::vector<int32_t>&, std::minstd_rand&)
+      const;
+  int32_t getLine(std::istream&, std::vector<int32_t>&, std::minstd_rand&)
+      const;
+  int32_t getLineTokens(std::istream&, std::vector<int32_t>&, std::vector<int32_t>&, std::vector<std::string>&)
+	const;
   int32_t getStringNoNewline(std::string_view, std::vector<int32_t>&,
       std::vector<int32_t>&) const;
   int32_t getLine(std::istream&, std::vector<int32_t>&, std::vector<int32_t>&, std::vector<int32_t>&, std::minstd_rand&, int32_t flags = 0)

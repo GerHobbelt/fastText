@@ -33,6 +33,7 @@
 
 namespace fasttext {
 
+
 class FastText {
  public:
   using TrainCallback =
@@ -78,6 +79,8 @@ class FastText {
   void addInputVector(Vector&, int32_t) const;
   void validate();
   void trainThread(int32_t, const TrainCallback& callback);
+  void trainThreadFromArchive(int32_t, const TrainCallback& callback);
+  void saveInterm(real);
   std::vector<std::pair<real, std::string>> getNN(
       const DenseMatrix& wordVectors,
       const Vector& queryVec,

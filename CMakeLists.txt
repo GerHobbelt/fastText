@@ -6,7 +6,7 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.22)
 project(fasttext)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -14,6 +14,12 @@ set(CMAKE_CXX_STANDARD 17)
 # The version number.
 set (fasttext_VERSION_MAJOR 0)
 set (fasttext_VERSION_MINOR 1)
+
+option(READ_FROM_XZ "Building with libboost::iostreams (allows archive reading)" ON)
+
+if (READ_FROM_XZ)
+  find_package(Boost         1.46  REQUIRED COMPONENTS iostreams)
+endif()
 
 # include_directories(fasttext)
 
@@ -80,11 +86,10 @@ function(add_fasttext_exe suffix)
   set_target_properties(fasttext-static${suffix} PROPERTIES OUTPUT_NAME fasttext${suffix})
   add_executable(fasttext-bin${suffix} src/main.cc)
 
-if (MSVC)
-   SET(CMAKE_EXE_LINKER_FLAGS "-pthread")
-   target_link_libraries(fasttext-bin fasttext-static)
+if (READ_FROM_XZ)
+  target_link_libraries(fasttext-bin pthread fasttext-static Boost::iostreams)
 else()
-   target_link_libraries(fasttext-bin pthread fasttext-static)
+  target_link_libraries(fasttext-bin pthread fasttext-static)
 endif()
 
   target_link_libraries(fasttext-bin${suffix} pthread fasttext-static${suffix})
