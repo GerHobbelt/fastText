@@ -13,6 +13,7 @@
 #include <ostream>
 #include <random>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -27,13 +28,13 @@ class Dictionary {
   static const int32_t MAX_VOCAB_SIZE = 30000000;
   static const int32_t MAX_LINE_SIZE = 1024;
 
-  int32_t find(const std::string&) const;
-  int32_t find(const std::string&, uint32_t h) const;
+  int32_t find(const std::string_view) const;
+  int32_t find(const std::string_view, uint32_t h) const;
   void initTableDiscard();
   void initNgrams();
   void reset(std::istream&) const;
   void pushHash(std::vector<int32_t>&, int32_t) const;
-  void addSubwords(std::vector<int32_t>&, const std::string&, int32_t) const;
+  void addSubwords(std::vector<int32_t>&, const std::string_view, int32_t) const;
 
   std::shared_ptr<Args> args_;
   /// NOTE: 
@@ -68,10 +69,10 @@ class Dictionary {
   int32_t nwords() const;
   int32_t nlabels() const;
   int64_t ntokens() const;
-  int32_t getId(const std::string&) const;
-  int32_t getId(const std::string&, uint32_t h) const;
+  int32_t getId(const std::string_view) const;
+  int32_t getId(const std::string_view, uint32_t h) const;
   entry_type getType(int32_t) const;
-  entry_type getType(const std::string&) const;
+  entry_type getType(const std::string_view) const;
   bool discard(int32_t, real) const;
   bool checkValidWord(const std::string&, std::shared_ptr<Language>);
   std::string getWord(int32_t) const;
@@ -96,7 +97,7 @@ class Dictionary {
       int32_t n, 
       int32_t k, 
       std::minstd_rand& rng) const;
-  uint32_t hash(const std::string& str) const;
+  uint32_t hash(const std::string_view str) const;
   void add(const std::string&);
   bool readWord(std::istream&, std::string&) const;
   void readFromFile(std::istream&);
@@ -112,6 +113,8 @@ class Dictionary {
 	const;
   int32_t getLine(std::istream&, std::vector<int32_t>&, std::minstd_rand&)
       const;
+  int32_t getStringNoNewline(std::string_view, std::vector<int32_t>&,
+      std::vector<int32_t>&) const;
   int32_t getLine(std::istream&, std::vector<int32_t>&, std::vector<int32_t>&, std::vector<int32_t>&, std::minstd_rand&, int32_t flags = 0)
     const;
   std::vector<int64_t> getInvalidWords() {

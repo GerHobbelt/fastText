@@ -814,7 +814,7 @@ std::vector<std::pair<std::string, Vector>> FastText::getNgramVectors(
     if (ngrams[i] >= 0) {
       vec.addRow(*input_, ngrams[i]);
     }
-    result.push_back(std::make_pair(substrings[i], std::move(vec)));
+    result.emplace_back(substrings[i], std::move(vec));
   }
   return result;
 }
@@ -909,7 +909,7 @@ std::vector<std::pair<real, std::string>> FastText::getAnalogies(
     const std::string& wordA,
     const std::string& wordB,
     const std::string& wordC) {
-  Vector query = Vector(args_->dim);
+  Vector query(args_->dim);
   query.zero();
 
   Vector buffer(args_->dim);

@@ -73,26 +73,7 @@ Model::Model(
 void Model::computeHidden(const std::vector<int32_t>& input, State& state)
     const {
   Vector& hidden = state.hidden;
-  /// Set hidden vector to zero to clear historical cumputational results.
-  hidden.zero();
-  /// The core computational process is: 
-  ///   iterate along each element in input, which is an `std::vector<int32_t>` 
-  ///   instance, each element is an token (word id or char n-gram bucket id).
-  ///     accumulate each token's embedding vector to `hidden`
-  ///
-  ///   This "loop-accumulate" style process can help us getting the result of 
-  ///   the hidden vector, which is the same as using "multi-hot" form of input 
-  ///   vector multiple with embedding matrix, but "loop-accumulate" style only 
-  ///   using query and add operator without multiply operator (actually the 
-  ///   multiply operate will executed on a lot of zero, it's a huge waste of 
-  ///   computational resource), so the performance is much better. 
-  for (auto it = input.cbegin(); it != input.cend(); ++it) {
-    hidden.addRow(*wi_, *it);
-  }
-  /// Above process gets the sum of all input tokens' embedding vectors, here we 
-  /// divide that value with `input.size()`, which is equal with the input tokens' 
-  /// number, so now we get the average of all input tokens' embedding vectors. 
-  hidden.mul(1.0 / input.size());
+  wi_->averageRowsToVector(hidden, input);
 }
 
 /**
