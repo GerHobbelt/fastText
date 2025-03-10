@@ -7,7 +7,7 @@
 #
 
 CXX = c++
-CXXFLAGS = -pthread -std=c++17 -march=native
+CXXFLAGS = -pthread -std=c++17 -march=native -Ithird-party/sentencepiece/src -lsentencepiece
 OBJS = args.o autotune.o matrix.o dictionary.o language.o loss.o productquantizer.o densematrix.o quantmatrix.o vector.o model.o utils.o meter.o fasttext.o
 INCLUDES = -I.
 

@@ -17,6 +17,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <sentencepiece_processor.h>
+
 #include "args.h"
 #include "real.h"
 #include "language.h"
@@ -52,6 +54,8 @@ class Dictionary {
 
   int64_t pruneidx_size_;
   std::unordered_map<int32_t, int32_t> pruneidx_;
+
+  sentencepiece::SentencePieceProcessor processor_;
 
  public:
   static const std::string EOS;

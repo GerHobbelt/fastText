@@ -20,8 +20,8 @@
 namespace fasttext {
 
 const std::string Dictionary::EOS = "</s>";
-const std::string Dictionary::BOW = "<";
-const std::string Dictionary::EOW = ">";
+const std::string Dictionary::BOW = "";
+const std::string Dictionary::EOW = "";
 
 Dictionary::Dictionary(std::shared_ptr<Args> args)
     : args_(args),
@@ -33,7 +33,13 @@ Dictionary::Dictionary(std::shared_ptr<Args> args)
       nwords_(0),
       nlabels_(0),
       ntokens_(0),
-      pruneidx_size_(-1) {}
+      pruneidx_size_(-1) {
+  const auto status = processor_.Load(args->spmModel);
+  if (!status.ok()) {
+    std::cerr << status.ToString() << std::endl;
+    // error
+  }
+}
 
 Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in)
     : args_(args),
@@ -43,6 +49,11 @@ Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in)
       ntokens_(0),
       pruneidx_size_(-1) {
   load(in);
+  const auto status = processor_.Load(args->spmModel);
+  if (!status.ok()) {
+    std::cerr << status.ToString() << std::endl;
+    // error
+  }
 }
 
 Dictionary::Dictionary(std::shared_ptr<Args> args, std::istream& in, std::shared_ptr<Language> lang)
@@ -324,42 +335,14 @@ void Dictionary::computeSubwords(
     const std::string& word,
     std::vector<int32_t>& ngrams,
     std::vector<std::string>* substrings) const {
-  for (size_t i = 0; i < word.size(); i++) {
-    std::string ngram;
-    // TODO: Figure out why using this char filtering rule.
-    if ((word[i] & 0xC0) == 0x80) {
-      continue;
-    }
-    // Note, here we have a "max char n-gram" notion, i.e. `args_->maxn`, which means 
-    // for each word, we will calculate char 1-gram, ... , n-gram(n == `args_->maxn`) 
-    // unless word length smaller than `args_->maxn`.
-    for (size_t j = i, n = 1; j < word.size() && n <= args_->maxn; n++) {
-      ngram.push_back(word[j++]);
-      // First extract char 1-gram, which means putting each char in `ngram`.
-      // 
-      // Note, we do not use char n-gram text itself to represent char n-gram feature, 
-      // but using some int id to represent char n-gram.
-      // For char 1-gram case (which is char itself), we will using `char` to `int32_t` 
-      // implicit conversion result as each 1-gram id and push back into `ngram`.
-      // For char n-gram (n larger than 2), we will first calculate a hash value as 
-      // n-gram id for each n-gram and push back into `ngram` with `Dictionary::pushHash` 
-      // according certain char n-gram pruning rule.
-      while (j < word.size() && (word[j] & 0xC0) == 0x80) {
-        ngram.push_back(word[j++]);
-      }
-      if (n >= args_->minn && !(n == 1 && (i == 0 || j == word.size()))) {
-        // Execute hash-bucketing on `Dictionary::hash` result of each n-gram text. 
-        // Using the mod of `Dictionary::hash` result on `args_->bucket` as 
-        // current n-gram's hash-bucket id. 
-        // Cheatsheet:
-        //   1. args_->bucket: Hash bucket number for char n-gram. 
-        int32_t h = hash(ngram) % args_->bucket;
-        pushHash(ngrams, h);
-        // TODO: Firgure out `substring` meaning
-        if (substrings) {
-          substrings->push_back(ngram);
-        }
-      }
+  std::vector<std::string> pieces;
+  processor_.Encode(word, &pieces);
+  for (size_t i = 0; i < pieces.size(); i++) {
+    const std::string& piece = pieces[i];
+    int32_t h = hash(piece) % args_->bucket;
+    pushHash(ngrams, h);
+    if (substrings) {
+      substrings->push_back(piece);
     }
   }
 }

@@ -194,6 +194,19 @@ void Model::update(
   }
 }
 
+void Model::computeLoss(
+    const std::vector<int32_t>& input,
+    const std::vector<int32_t>& targets,
+    int32_t targetIndex,
+    State& state) {
+  if (input.size() == 0) {
+    return;
+  }
+  computeHidden(input, state);
+  real lossValue = loss_->forward(targets, targetIndex, state, 0.0, false);
+  state.incrementNExamples(lossValue);
+}
+
 real Model::std_log(real x) const {
   return std::log(x + 1e-5);
 }

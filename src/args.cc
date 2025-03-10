@@ -44,6 +44,7 @@ Args::Args() {
   saveVectors = false;
   seed = 0;
   discardOovWords = false;
+  spmModel = "";
 
   qout = false;
   retrain = false;
@@ -56,6 +57,10 @@ Args::Args() {
   autotunePredictions = 1;
   autotuneDuration = 60 * 5; // 5 minutes
   autotuneModelSize = "";
+
+  validationFile = "";
+  earlyStop = 3;
+  validateEvery = 32768;
 }
 
 std::string Args::lossToString(loss_name ln) const {
@@ -224,6 +229,14 @@ void Args::parseArgs(const std::vector<std::string>& args) {
       } else if (args[ai] == "-saveVectors") {
         saveVectors = true;
         ai--;
+      } else if (args[ai] == "-spm") {
+        spmModel = std::string(args.at(ai + 1));
+      } else if (args[ai] == "-validation") {
+        validationFile = std::string(args.at(ai + 1));
+      } else if (args[ai] == "-earlyStop") {
+        earlyStop = std::stoi(args.at(ai + 1));
+      } else if (args[ai] == "-validateEvery") {
+        validateEvery = std::stoi(args.at(ai + 1));
       } else if (args[ai] == "-qnorm") {
         qnorm = true;
         ai--;
@@ -336,7 +349,11 @@ void Args::printTrainingHelp() {
       << boolToString(saveOutput) << "]\n"
       << "  -saveVectors        whether vectors should be saved ["
       << boolToString(saveVectors) << "]\n"
-      << "  -seed               random generator seed  [" << seed << "]\n";
+      << "  -seed               random generator seed  [" << seed << "]\n"
+      << "  -spm                sentencepiece model  [" << spmModel << "]\n"
+      << "  -validation         validation file for early stopping  [" << validationFile << "]\n"
+      << "  -earlyStop          Stop after number of steps without improvement  [" << earlyStop << "]\n"
+      << "  -validateEvery      Number of training steps between validations  [" << validateEvery << "]\n";
 }
 
 void Args::printAutotuneHelp() {

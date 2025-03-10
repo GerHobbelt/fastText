@@ -76,6 +76,7 @@ class Args {
   bool saveOutput;
   bool saveVectors;
   int seed;
+  std::string spmModel;
 
   /// If executes product-quantization for output layer.
   bool qout;
@@ -89,6 +90,10 @@ class Args {
   int autotunePredictions;
   int autotuneDuration;
   std::string autotuneModelSize;
+
+  std::string validationFile;
+  int earlyStop;
+  int validateEvery;
 
   void parseArgs(const std::vector<std::string>& args);
   void printHelp();
