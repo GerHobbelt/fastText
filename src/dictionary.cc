@@ -517,6 +517,37 @@ void Dictionary::readFromFile(std::istream& in) {
   }
 }
 
+void Dictionary::createDictionary(std::function<bool(std::string&)> getWord) {
+    std::string word;
+    int64_t minThreshold = 1;
+    while (getWord(word)) {
+        add(word);
+        if (ntokens_ % 1000000 == 0 && args_->verbose > 1) {
+            std::cerr << "\rRead " << ntokens_ / 1000000 << "M words" << std::flush;
+        }
+        if (size_ > 0.75 * MAX_VOCAB_SIZE) {
+            minThreshold++;
+            threshold(minThreshold, minThreshold);
+        }
+    }
+    threshold(args_->minCount, args_->minCountLabel);
+    initTableDiscard();
+    initNgrams();
+    if (args_->verbose > 0) {
+        std::cerr << "\rRead " << ntokens_ / 1000000 << "M words" << std::endl;
+        std::cerr << "Number of words:  " << nwords_ << std::endl;
+        std::cerr << "Number of labels: " << nlabels_ << std::endl;
+    }
+    if (size_ == 0) {
+        throw std::invalid_argument(
+                "Empty vocabulary. Try a smaller -minCount value.");
+    }
+}
+
+void Dictionary::readFromFile(std::istream& in) {
+    createDictionary([&](std::string& word){ return readWord(in, word); });
+}
+
 /**
  * @brief
  * This helps to dynamical located some "stop words" (and "stop labels") for 

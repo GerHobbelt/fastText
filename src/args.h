@@ -50,6 +50,8 @@ class Args {
   /// `input` represents the pretrained full-size model's path which will be 
   /// compressed by PQ approach.
   std::string input;
+  // for cases when used as library
+  std::vector<std::string> vector_input;
   std::string output;
   double lr;
   int lrUpdateRate;

@@ -1197,20 +1197,33 @@ std::shared_ptr<Matrix> FastText::createTrainOutputMatrix() const {
 void FastText::train(const Args& args, const TrainCallback& callback) {
   args_ = std::make_shared<Args>(args);
   dict_ = std::make_shared<Dictionary>(args_);
-  if (args_->input == "-") {
-    // manage expectations
-    throw std::invalid_argument("Cannot use stdin for training!");
-  }
-  std::ifstream ifs(args_->input);
-  if (!ifs.is_open()) {
-    throw std::invalid_argument(
-        args_->input + " cannot be opened for training!");
-  }
+  if (args_->vector_input.empty()) {
+      if (args_->input == "-") {
+          // manage expectations
+          throw std::invalid_argument("Cannot use stdin for training!");
+      }
+      std::ifstream ifs(args_->input);
+      if (!ifs.is_open()) {
+          throw std::invalid_argument(
+                  args_->input + " cannot be opened for training!");
+      }
   /// Reading and building vocab from data file, includes building vocab of 
   /// labels, words and words' char n-gram according several stop-word filtering, 
   /// id pruning strategies.
-  dict_->readFromFile(ifs);
-  ifs.close();
+      dict_->readFromFile(ifs);
+      ifs.close();
+  } else {
+      auto it = args_->vector_input.begin();
+      auto end = args_->vector_input.end();
+      dict_->createDictionary([&it, &end](std::string &word) {
+          if (it == end) {
+              return false;
+          }
+          word = *it;
+          ++it;
+          return true;
+      });
+  }
 
   /// Initializing input layer related parameters, which are, embeddings.
   if (!args_->pretrainedModel.empty()) {
