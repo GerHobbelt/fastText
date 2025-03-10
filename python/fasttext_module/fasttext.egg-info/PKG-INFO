@@ -22,6 +22,9 @@ Classifier: Operating System :: POSIX
 Classifier: Operating System :: Unix
 Classifier: Operating System :: MacOS
 License-File: LICENSE
+Requires-Dist: pybind11>=2.2
+Requires-Dist: setuptools>=0.7.0
+Requires-Dist: numpy
 
 fastText |CircleCI|
 ===================

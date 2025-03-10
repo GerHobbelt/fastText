@@ -1,6 +1,7 @@
 LICENSE
 MANIFEST.in
 README.md
+pyproject.toml
 setup.cfg
 setup.py
 python/README.md
@@ -20,6 +21,7 @@ python/fasttext_module/fasttext/tests/test_configurations.py
 python/fasttext_module/fasttext/tests/test_script.py
 python/fasttext_module/fasttext/util/__init__.py
 python/fasttext_module/fasttext/util/util.py
+src/aligned.h
 src/args.cc
 src/args.h
 src/autotune.cc
