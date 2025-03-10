@@ -15,6 +15,12 @@
 #include <pybind11/stl.h>
 #include <real.h>
 #include <vector.h>
+
+// Define ssize_t for Windows
+#ifdef _WIN32
+#include <basetsd.h>
+typedef SSIZE_T ssize_t;
+#endif
 #include <cmath>
 #include <iterator>
 #include <sstream>
@@ -217,29 +223,28 @@ PYBIND11_MODULE(fasttext_pybind, m) {
       .def("scoreVsTrue", &fasttext::Meter::scoreVsTrue)
       .def(
           "precisionRecallCurveLabel",
-          (std::vector<std::pair<double, double>>(fasttext::Meter::*)(int32_t)
-               const) &
-              fasttext::Meter::precisionRecallCurve)
+          static_cast<std::vector<std::pair<double, double>> (fasttext::Meter::*)(int32_t) const>(
+              &fasttext::Meter::precisionRecallCurve))
       .def(
           "precisionRecallCurve",
-          (std::vector<std::pair<double, double>>(fasttext::Meter::*)() const) &
-              fasttext::Meter::precisionRecallCurve)
+          static_cast<std::vector<std::pair<double, double>> (fasttext::Meter::*)() const>(
+              &fasttext::Meter::precisionRecallCurve))
       .def(
           "precisionAtRecallLabel",
-          (double (fasttext::Meter::*)(int32_t, double) const) &
-              fasttext::Meter::precisionAtRecall)
+          static_cast<double (fasttext::Meter::*)(int32_t, double) const>(
+              &fasttext::Meter::precisionAtRecall))
       .def(
           "precisionAtRecall",
-          (double (fasttext::Meter::*)(double) const) &
-              fasttext::Meter::precisionAtRecall)
+          static_cast<double (fasttext::Meter::*)(double) const>(
+              &fasttext::Meter::precisionAtRecall))
       .def(
           "recallAtPrecisionLabel",
-          (double (fasttext::Meter::*)(int32_t, double) const) &
-              fasttext::Meter::recallAtPrecision)
+          static_cast<double (fasttext::Meter::*)(int32_t, double) const>(
+              &fasttext::Meter::recallAtPrecision))
       .def(
           "recallAtPrecision",
-          (double (fasttext::Meter::*)(double) const) &
-              fasttext::Meter::recallAtPrecision);
+          static_cast<double (fasttext::Meter::*)(double) const>(
+              &fasttext::Meter::recallAtPrecision));
 
   py::class_<fasttext::FastText>(m, "fasttext")
       .def(py::init<>())
