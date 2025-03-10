@@ -68,6 +68,11 @@ template <class T> class AlignedVector {
 
     std::size_t size() const { return size_; }
 
+	void resize(size_t n);
+
+	void erase(T *start, T *end);
+
+
     T &operator[](std::size_t offset) { return mem_[offset]; }
     const T &operator[](std::size_t offset) const { return mem_[offset]; }
 

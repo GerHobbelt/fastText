@@ -1413,7 +1413,6 @@ void FastText::train(const Args& args, const TrainCallback& callback) {
           // manage expectations
           throw std::invalid_argument("Cannot use stdin for training!");
       }
-  {
     impl::ArchiveReader in(args_->input);
     dict_->readFromFile(in.stream());
   } else {
@@ -1586,13 +1585,17 @@ void FastText::startThreads(const TrainCallback& callback) {
     }
     for (int32_t i = 0; i < args_->thread; i++) {
       /// Iteratively define each thread's training task.
-      threads.push_back(std::thread([=]() { trainThread(i, callback); }));
+      threads.push_back(std::thread([=, this]() {
+		  trainThread(i, callback);
+		}));
     }
   /// Using single-thread training mode.
   } else {
     if (utils::endsWith(args_->input, ".xz") || utils::endsWith(args_->input, ".gz")) {
       if (args_->verbose > 1) {
-        threads.push_back(std::thread([=]() { trainThreadFromArchive(0, callback); }));
+        threads.push_back(std::thread([=,this]() {
+			trainThreadFromArchive(0, callback);
+		}));
       } else {
         trainThreadFromArchive(0, callback);
       }

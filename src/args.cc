@@ -366,7 +366,7 @@ void Args::printTrainingHelp() {
       << "  -seed               random generator seed  [" << seed << "]\n"
       << "  -spm                sentencepiece model  [" << spmModel << "]\n"
       << "  -validation         validation file for early stopping  [" << validationFile << "]\n"
-      << "  -inputModel         saved checkpointed model file path (only for incremental training)\n";
+      << "  -inputModel         saved checkpointed model file path (only for incremental training)\n"
       << "  -earlyStop          Stop after number of steps without improvement  [" << earlyStop << "]\n"
       << "  -validateEvery      Number of training steps between validations  [" << validateEvery << "]\n";
 }

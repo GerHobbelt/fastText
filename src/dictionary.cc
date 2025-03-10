@@ -460,10 +460,10 @@ void Dictionary::update(std::shared_ptr<Dictionary> dict, bool discardOovWords) 
   std::cerr << "Pretrained words: " << updated << " updated, " << added << " added" << std::endl;
 }
 
-void Dictionary::readFromFile(std::istream& in) {
+void Dictionary::createDictionary(std::function<bool(std::string&)> getWord) {
   std::string word;
   int64_t minThreshold = 1;
-  while (readWord(in, word)) {
+  while (getWord(word)) {
     add(word);
     // Log
     if (ntokens_ % 1000000 == 0 && args_->verbose > 1) {
@@ -513,35 +513,10 @@ void Dictionary::readFromFile(std::istream& in) {
   }
 }
 
-void Dictionary::createDictionary(std::function<bool(std::string&)> getWord) {
-    std::string word;
-    int64_t minThreshold = 1;
-    while (getWord(word)) {
-        add(word);
-        if (ntokens_ % 1000000 == 0 && args_->verbose > 1) {
-            std::cerr << "\rRead " << ntokens_ / 1000000 << "M words" << std::flush;
-        }
-        if (size_ > 0.75 * MAX_VOCAB_SIZE) {
-            minThreshold++;
-            threshold(minThreshold, minThreshold);
-        }
-    }
-    threshold(args_->minCount, args_->minCountLabel);
-    initTableDiscard();
-    initNgrams();
-    if (args_->verbose > 0) {
-        std::cerr << "\rRead " << ntokens_ / 1000000 << "M words" << std::endl;
-        std::cerr << "Number of words:  " << nwords_ << std::endl;
-        std::cerr << "Number of labels: " << nlabels_ << std::endl;
-    }
-    if (size_ == 0) {
-        throw std::invalid_argument(
-                "Empty vocabulary. Try a smaller -minCount value.");
-    }
-}
-
 void Dictionary::readFromFile(std::istream& in) {
-    createDictionary([&](std::string& word){ return readWord(in, word); });
+    createDictionary([&](std::string& word){
+		return readWord(in, word);
+	});
 }
 
 /**
@@ -685,7 +660,7 @@ void Dictionary::addSubwords(
   if (wid < 0) { // out of vocab
     if (token != EOS) {
       std::string concat;
-      concat.reserve(BOW.size() + token.size() + EOW.size());
+      concat.reserve(strlen(BOW) + token.size() + strlen(EOW));
       concat += BOW;
       concat.append(token.data(), token.size());
       concat += EOW;
@@ -899,7 +874,7 @@ int32_t Dictionary::getStringNoNewline(
       addSubwords(words, token, wid);
       word_hashes.push_back(h);
     } else if (type == entry_type::label && wid >= 0) {
-      labels.push_back(wid);
+      labels.push_back(wid /* (wid - nwords_) */ );
     }
     if (token == EOS) {
       break;
@@ -993,52 +968,6 @@ int32_t Dictionary::getLineTokens(
   }
   addWordNgrams(words, word_hashes, args_->wordNgrams);
   return ntokens;
-}
-
-namespace {
-bool readWordNoNewline(std::string_view& in, std::string_view& word) {
-  const std::string_view spaces(" \n\r\t\v\f\0");
-  std::string_view::size_type begin = in.find_first_not_of(spaces);
-  if (begin == std::string_view::npos) {
-    in.remove_prefix(in.size());
-    return false;
-  }
-  in.remove_prefix(begin);
-  word = in.substr(0, in.find_first_of(spaces));
-  in.remove_prefix(word.size());
-  return true;
-}
-} // namespace
-
-int32_t Dictionary::getStringNoNewline(
-    std::string_view in,
-    std::vector<int32_t>& words,
-    std::vector<int32_t>& labels) const {
-  std::vector<int32_t> word_hashes;
-  std::string_view token;
-  int32_t ntokens = 0;
-
-  words.clear();
-  labels.clear();
-  while (readWordNoNewline(in, token)) {
-		uint32_t h = hash(token);
-		int32_t wid = getId(token, h);
-		entry_type type = wid < 0 ? getType(token) : getType(wid);
-
-		ntokens++;
-		if (type == entry_type::word) {
-			addSubwords(words, token, wid);
-			word_hashes.push_back(h);
-			tokens.push_back(token);
-		} else if (type == entry_type::label && wid >= 0) {
-			labels.push_back(wid - nwords_);
-		}
-		if (token == EOS) {
-			break;
-		}
-	}
-	addWordNgrams(words, word_hashes, args_->wordNgrams);
-	return ntokens;
 }
 
 /**
